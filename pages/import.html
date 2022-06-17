@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Import Waypoints</title>
+    <link rel="stylesheet" href="../index.css" />
+  </head>
+  <body class="export-form grid">
+    <input
+      type="button"
+      class="col1 small-font action"
+      data-trigger="import-waypoints"
+      value="⇧"
+    />
+    <textarea id="data"></textarea>
+    <script type="module">
+      import { runImport } from "../dist/index.js";
+      runImport();
+    </script>
+    <div class="center bright hidden" id="toaster">Notifications</div>
+</body>
+</html>

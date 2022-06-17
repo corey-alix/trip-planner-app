@@ -28,6 +28,18 @@
   </head>
   <body>
     <div id="map"></div>
-    <input type="text" id="search" placeholder="[search]" />
+    <glass class="grid above-map">
+      <select
+        id="admin-menu"
+        title="Admin Menu"
+        class="col1 fill-width dark-background light-text above-map"
+      >
+        <option></option>
+        <option data-trigger="open-export-form">Export Map</option>
+        <option data-trigger="open-import-form">Import Map</option>
+      </select>
+      <input type="text" id="search" placeholder="[search]" class="col2-3" />
+    </glass>
+    <div class="above-map center bright hidden" id="toaster">Notifications</div>
   </body>
 </html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Export Map</title>
+    <link rel="stylesheet" href="../index.css" />
+  </head>
+  <body class="export-form grid">
+    <input
+      type="button"
+      class="col1 small-font action"
+      data-trigger="copy-to-clipboard"
+      value="⇧"
+    />
+    <label class="col2-3">Export</label>
+    <textarea readonly="1" id="data"></textarea>
+    <script type="module">
+      import { runExport } from "../dist/index.js";
+      runExport();
+    </script>
+    <div class="center bright hidden" id="toaster">Notifications</div>
+</body>
+</html>
