@@ -64,22 +64,30 @@ export function run() {
   function createMarker(map: Leaflet.Map, markerInfo: MarkerInfo) {
     const marker = L.marker(markerInfo.center, {
       title: markerInfo.text,
-      draggable: true,
+      draggable: false,
       autoPan: true,
     });
-    marker.bindPopup(
-      `<h2>${markerInfo.text}</h2>
-      <button data-event="move-marker-backward">Visit Sooner</button>
-      <button data-event="delete-marker">Delete</button>
-      `
-    );
+
+    const content = document.createElement("div");
+    content.classList.add("marker-content");
+    marker.bindPopup(content);
 
     marker.on("popupopen", () => {
+      content.innerHTML = `<h2>${markerInfo.text}</h2>
+      <button data-event="move-marker-backward">Visit Sooner</button>
+      <button data-event="move-marker">${marker.dragging?.enabled() ? "Dock" : "Move"}</button>
+      <button data-event="delete-marker">Delete</button>
+      `;
+
       const popupElement = marker.getPopup()?.getElement();
       if (!popupElement) return;
 
-      const selectors = ["move-marker-backward", "delete-marker"];
-      const [backwardButton, deleteButton] = selectors.map(
+      const selectors = [
+        "move-marker-backward",
+        "delete-marker",
+        "move-marker",
+      ];
+      const [backwardButton, deleteButton, moveButton] = selectors.map(
         (id) =>
           popupElement.querySelector(
             `button[data-event='${id}']`
@@ -93,6 +101,15 @@ export function run() {
 
       backwardButton?.addEventListener("click", () => {
         trigger("move-marker-backward", { markerInfo });
+      });
+
+      moveButton?.addEventListener("click", () => {
+        if (marker.dragging?.enabled()) {
+          marker.dragging?.disable();
+        } else {
+          marker.dragging?.enable();
+        }
+        marker.closePopup();
       });
     });
 

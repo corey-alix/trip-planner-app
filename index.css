@@ -87,3 +87,11 @@ glass {
   right: 0;
 }
 
+.marker-content {
+  min-width: 20rem;
+  min-height: 6rem;
+}
+
+.marker-content h2 {
+  height:4rem;
+}
