@@ -4,7 +4,7 @@ declare const L: typeof Leaflet;
 
 type MarkerInfo = {
   text: string;
-  center: [number, number];
+  center: L.LatLngLiteral;
 };
 
 const markers = [] as Array<MarkerInfo>;
@@ -130,11 +130,12 @@ function hookupSearch() {
     if (searchResults.features.length) {
       const result = searchResults.features[0];
       const text = result.properties.formatted;
-      const center = [
-        (result.bbox[0] + result.bbox[2]) / 2,
-        (result.bbox[1] + result.bbox[3]) / 2,
-      ].reverse();
-      trigger("add-marker", { text, center } as MarkerInfo);
+      const center = {
+        lng: (result.bbox[0] + result.bbox[2]) / 2,
+        lat: (result.bbox[1] + result.bbox[3]) / 2,
+      };
+      const markerInfo = { text, center } as MarkerInfo;
+      trigger("add-marker", { markerInfo });
     }
   });
 }
@@ -142,21 +143,31 @@ function hookupSearch() {
 export function run() {
   promptForKeys();
   hookupSearch();
+  upgradeDatabase();
 
-  const map = L.map("map").fitWorld();
+  const map = L.map("map", {
+    zoomControl: false,
+  }).fitWorld();
+
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution:
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
 
-  on("add-marker", (markerInfo: MarkerInfo) => {
+  map.on("move", () => {
+    localStorage.setItem("mapCenter", JSON.stringify(map.getCenter()));
+    localStorage.setItem("mapZoom", JSON.stringify(map.getZoom()));
+  });
+
+  on("add-marker", (info: { markerInfo: MarkerInfo }) => {
+    const { markerInfo } = info;
     const priorMarker = markers.length ? markers[markers.length - 1] : null;
     map.setView(markerInfo.center);
-    L.marker(markerInfo.center, {
-      title: markerInfo.text,
-    }).addTo(map);
+
+    createMarker(map, markerInfo);
     markers.push(markerInfo);
+
     if (priorMarker) {
       L.polyline([priorMarker.center, markerInfo.center], {
         color: "green",
@@ -165,10 +176,110 @@ export function run() {
     saveMarkers();
   });
 
+  on("delete-marker", (data: { markerInfo: MarkerInfo }) => {
+    const { markerInfo } = data;
+    const index = markers.indexOf(markerInfo);
+    if (index > -1) {
+      markers.splice(index, 1);
+    }
+    drawPolylines(map);
+  });
+
+  on("move-marker-backward", (data: { markerInfo: MarkerInfo }) => {
+    const { markerInfo } = data;
+    const index = markers.indexOf(markerInfo);
+    if (index > 0) {
+      const temp = markers[index - 1];
+      markers[index - 1] = markerInfo;
+      markers[index] = temp;
+    }
+    drawPolylines(map);
+  });
+
+  const center = JSON.parse(
+    localStorage.getItem("mapCenter") || "null"
+  ) as Leaflet.LatLngLiteral;
+
+  const zoom = JSON.parse(localStorage.getItem("mapZoom") || "0") as number;
+
+  if (center) {
+    map.setView(center, zoom);
+  }
+
   loadMarkers().forEach((m) => markers.push(m));
+
+  drawPolylines(map);
+
   if (markers.length) {
-    markers.forEach((m) => L.marker(m.center, { title: m.text }).addTo(map));
-    map.fitBounds(markers.map((m) => m.center));
-    L.polyline(markers.map((m) => m.center)).addTo(map);
+    markers.forEach((m) => createMarker(map, m));
+    const bounds = markers.map(
+      (m) => [m.center.lat, m.center.lng] as Leaflet.LatLngTuple
+    );
+    if (!center) map.fitBounds(bounds);
+  }
+}
+function createMarker(map: Leaflet.Map, markerInfo: MarkerInfo) {
+  const marker = L.marker(markerInfo.center, {
+    title: markerInfo.text,
+    draggable: true,
+    autoPan: true,
+  });
+  marker.bindPopup(
+    `<h2>${markerInfo.text}</h2>
+    <button data-event="move-marker-backward">Visit Sooner</button>
+    <button data-event="delete-marker">Delete</button>
+    `
+  );
+
+  marker.on("popupopen", () => {
+    const popupElement = marker.getPopup()?.getElement();
+    if (!popupElement) return;
+
+    const selectors = ["move-marker-backward", "delete-marker"];
+    const [backwardButton, deleteButton] = selectors.map(
+      (id) =>
+        popupElement.querySelector(
+          `button[data-event='${id}']`
+        ) as HTMLButtonElement
+    );
+
+    deleteButton?.addEventListener("click", () => {
+      marker.remove();
+      trigger("delete-marker", { markerInfo });
+    });
+
+    backwardButton?.addEventListener("click", () => {
+      trigger("move-marker-backward", { markerInfo });
+    });
+  });
+
+  marker.on("dragend", () => {
+    const { lat, lng } = marker.getLatLng();
+    markerInfo.center = { lat, lng };
+    saveMarkers();
+    drawPolylines(map);
+  });
+
+  marker.addTo(map);
+  return marker;
+}
+
+let polyline: Leaflet.Polyline;
+
+function drawPolylines(map: Leaflet.Map) {
+  const bounds = markers.map(
+    (m) => [m.center.lat, m.center.lng] as Leaflet.LatLngTuple
+  );
+  if (polyline) polyline.remove();
+  polyline = L.polyline(bounds, {
+    color: "green",
+  }).addTo(map);
+}
+
+function upgradeDatabase() {
+  const version = localStorage.getItem("version");
+  if (!version) {
+    localStorage.setItem("version", "1");
+    localStorage.setItem("markers", "[]");
   }
 }
