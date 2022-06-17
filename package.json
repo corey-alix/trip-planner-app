@@ -1,0 +1,24 @@
+{
+  "name": "trip-planner-app",
+  "version": "1.0.0",
+  "description": "Add waypoints to a map and decorate each point with attributes",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/corey-alix/trip-planner-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/corey-alix/trip-planner-app/issues"
+  },
+  "homepage": "https://github.com/corey-alix/trip-planner-app#readme",
+  "dependencies": {
+    "@types/leaflet": "^1.7.11",
+    "typescript": "^4.7.3"
+  }
+}
