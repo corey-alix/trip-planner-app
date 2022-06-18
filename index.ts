@@ -1,4 +1,4 @@
-import type * as Leaflet from "leaflet";
+import * as Leaflet from "leaflet";
 
 declare const L: typeof Leaflet;
 
@@ -62,8 +62,14 @@ interface MarkerInfo {
 }
 
 export function run() {
-  const markers = loadMarkers();
+  const state = {
+    markerInfo: null as MarkerInfo | null,
+    marker: null as Leaflet.Marker | null,
+    markers: loadMarkers(),
+  };
+
   let polyline: Leaflet.Polyline;
+  const input = document.getElementById("search") as HTMLInputElement;
 
   function createMarker(map: Leaflet.Map, markerInfo: MarkerInfo) {
     markerInfo.id = markerInfo.id || uuid();
@@ -78,59 +84,31 @@ export function run() {
     marker.bindPopup(content);
 
     marker.on("popupopen", () => {
-      content.innerHTML = `<label class="title">${markerInfo.text}</label>
-      <button data-event="move-marker-backward">Visit Sooner</button>
-      <button data-event="move-marker">${
-        marker.dragging?.enabled() ? "Dock" : "Move"
+      content.innerHTML = `<div class="grid"><label class="title col1-4">${
+        markerInfo.text
+      }</label>
+      <button data-trigger="directions-to-marker">Find Directions</button>
+      <button data-trigger="move-marker-backward">Visit Sooner</button>
+      <button data-trigger="move-marker">${
+        marker.dragging?.enabled() ? "Prevent Dragging" : "Allow Dragging"
       }</button>
-      <button data-event="describe-marker">Notes</button>
-      <button data-event="delete-marker">Delete</button>
+      <button data-trigger="describe-marker">Edit Notes</button>
+      <button data-trigger="delete-marker">Remove from Route</button>
+      </div>
       `;
 
       const popupElement = marker.getPopup()?.getElement();
       if (!popupElement) return;
 
-      const selectors = [
-        "move-marker-backward",
-        "delete-marker",
-        "move-marker",
-        "describe-marker",
-      ];
-      const [backwardButton, deleteButton, moveButton, describeButton] =
-        selectors.map(
-          (id) =>
-            popupElement.querySelector(
-              `button[data-event='${id}']`
-            ) as HTMLButtonElement
-        );
-
-      deleteButton?.addEventListener("click", () => {
-        marker.remove();
-        trigger("delete-marker", { markerInfo });
-      });
-
-      backwardButton?.addEventListener("click", () => {
-        trigger("move-marker-backward", { markerInfo });
-      });
-
-      moveButton?.addEventListener("click", () => {
-        if (marker.dragging?.enabled()) {
-          marker.dragging?.disable();
-        } else {
-          marker.dragging?.enable();
-        }
-        marker.closePopup();
-      });
-
-      describeButton?.addEventListener("click", () => {
-        window.location.href = `./pages/describe.html?marker=${markerInfo.id}`;
-      });
+      applyTriggers(popupElement);
+      state.marker = marker;
+      state.markerInfo = markerInfo;
     });
 
     marker.on("dragend", () => {
       const { lat, lng } = marker.getLatLng();
       markerInfo.center = { lat, lng };
-      saveMarkers(markers);
+      saveMarkers(state.markers);
       drawPolylines(map);
     });
 
@@ -139,13 +117,73 @@ export function run() {
   }
 
   function drawPolylines(map: Leaflet.Map) {
-    const bounds = markers.map(
+    const bounds = state.markers.map(
       (m) => [m.center.lat, m.center.lng] as Leaflet.LatLngTuple
     );
     if (polyline) polyline.remove();
     polyline = L.polyline(bounds, {
       color: "green",
     }).addTo(map);
+  }
+
+  function hookupSearch() {
+    input.addEventListener("change", async () => {
+      const search = input.value;
+      input.select();
+      const searchResults = await geocode(search);
+      if (searchResults.features.length) {
+        const result = searchResults.features[0];
+        let text = result.properties.formatted;
+        switch (result.type) {
+          case "Feature":
+            switch (result.properties.result_type) {
+              case "building":
+                text = `${result.properties.address_line1}`;
+                break;
+              case "city":
+                text = `${result.properties.city}`;
+                break;
+              case "state":
+                text = `${result.properties.state}`;
+                break;
+              case "county":
+                text = result.properties.name!;
+                break;
+              case "street":
+                text = result.properties.street!;
+                break;
+              case "postcode":
+                break;
+              default:
+                console.log(
+                  `unknown result_type: ${result.properties.result_type}`
+                );
+            }
+            break;
+          default:
+            console.log(`unknown type: ${result.type}`);
+            break;
+        }
+        let center: Leaflet.LatLngLiteral | null = null;
+        switch (result.geometry.type) {
+          case "Point":
+            center = {
+              lng: result.geometry.coordinates[0],
+              lat: result.geometry.coordinates[1],
+            };
+            break;
+          default:
+            if (result.bbox) {
+              center = {
+                lng: (result.bbox[0] + result.bbox[2]) / 2,
+                lat: (result.bbox[1] + result.bbox[3]) / 2,
+              };
+            }
+        }
+        const markerInfo = { text, center } as MarkerInfo;
+        trigger("add-marker", { markerInfo });
+      }
+    });
   }
 
   applyTriggers();
@@ -166,12 +204,41 @@ export function run() {
   hookupSearch();
   upgradeDatabase();
 
+  on("toggle-search", () => {
+    input.classList.toggle("hidden");
+  });
+
+  on("delete-marker", () => {
+    if (!state.marker) return;
+    state.marker.remove();
+  });
+
+  on("move-marker", () => {
+    if (!state.marker) return;
+    if (state.marker.dragging?.enabled()) {
+      state.marker.dragging?.disable();
+    } else {
+      state.marker.dragging?.enable();
+    }
+    state.marker.closePopup();
+  });
+
+  on("describe-marker", () => {
+    if (!state.markerInfo) return;
+    window.location.href = `./pages/describe.html?marker=${state.markerInfo.id}`;
+  });
+
   on("open-export-form", () => {
     window.location.href = "./pages/export.html";
   });
 
   on("open-import-form", () => {
     window.location.href = "./pages/import.html";
+  });
+
+  on("directions-to-marker", () => {
+    if (!state.markerInfo) return;
+    window.location.href = `https://www.google.com/maps/place/${state.markerInfo.center.lat},${state.markerInfo.center.lng}`;
   });
 
   const map = L.map("map", {
@@ -195,14 +262,15 @@ export function run() {
     map.setView(markerInfo.center);
 
     createMarker(map, markerInfo);
-    markers.push(markerInfo);
+    state.markers.push(markerInfo);
 
-    saveMarkers(markers);
+    saveMarkers(state.markers);
     drawPolylines(map);
   });
 
-  on("delete-marker", (data: { markerInfo: MarkerInfo }) => {
-    const { markerInfo } = data;
+  on("delete-marker", () => {
+    const { markers, markerInfo } = state;
+    if (!markers || !markerInfo) return;
     const index = markers.indexOf(markerInfo);
     if (index > -1) {
       markers.splice(index, 1);
@@ -211,8 +279,9 @@ export function run() {
     }
   });
 
-  on("move-marker-backward", (data: { markerInfo: MarkerInfo }) => {
-    const { markerInfo } = data;
+  on("move-marker-backward", () => {
+    const { markers, markerInfo } = state;
+    if (!markers || !markerInfo) return;
     const index = markers.indexOf(markerInfo);
     if (index > 0) {
       const temp = markers[index - 1];
@@ -235,9 +304,9 @@ export function run() {
 
   drawPolylines(map);
 
-  if (markers.length) {
-    markers.forEach((m) => createMarker(map, m));
-    const bounds = markers.map(
+  if (state.markers.length) {
+    state.markers.forEach((m) => createMarker(map, m));
+    const bounds = state.markers.map(
       (m) => [m.center.lat, m.center.lng] as Leaflet.LatLngTuple
     );
     if (!center) map.fitBounds(bounds);
@@ -278,7 +347,11 @@ export function runDescribeMarker() {
   if (!marker) return;
   const target = document.getElementById("data") as HTMLTextAreaElement;
   target.value = marker.about || "";
+  const title = document.getElementById("title") as HTMLTextAreaElement;
+  title.value = marker.text;
+
   on("save", () => {
+    marker.text = title.value;
     marker.about = target.value;
     saveMarkers(markers);
     window.history.back();
@@ -348,65 +421,6 @@ async function geocode(search: string) {
   );
   const data = (await response.json()) as GeocodeReponse;
   return data;
-}
-
-function hookupSearch() {
-  const input = document.getElementById("search") as HTMLInputElement;
-  input.addEventListener("change", async () => {
-    const search = input.value;
-    input.select();
-    const searchResults = await geocode(search);
-    if (searchResults.features.length) {
-      const result = searchResults.features[0];
-      let text = result.properties.formatted;
-      switch (result.type) {
-        case "Feature":
-          switch (result.properties.result_type) {
-            case "building":
-              text = `${result.properties.address_line1}`;
-              break;
-            case "city":
-              text = `${result.properties.city}`;
-              break;
-            case "state":
-              text = `${result.properties.state}`;
-              break;
-            case "county":
-              text = result.properties.name!;
-              break;
-            case "street":
-              text = result.properties.street!;
-              break;
-            default:
-              console.log(
-                `unknown result_type: ${result.properties.result_type}`
-              );
-          }
-          debugger;
-          break;
-        default:
-          debugger;
-      }
-      let center: Leaflet.LatLngLiteral | null = null;
-      switch (result.geometry.type) {
-        case "Point":
-          center = {
-            lng: result.geometry.coordinates[0],
-            lat: result.geometry.coordinates[1],
-          };
-          break;
-        default:
-          if (result.bbox) {
-            center = {
-              lng: (result.bbox[0] + result.bbox[2]) / 2,
-              lat: (result.bbox[1] + result.bbox[3]) / 2,
-            };
-          }
-      }
-      const markerInfo = { text, center } as MarkerInfo;
-      trigger("add-marker", { markerInfo });
-    }
-  });
 }
 
 function upgradeDatabase() {

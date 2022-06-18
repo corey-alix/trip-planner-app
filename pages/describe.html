@@ -8,10 +8,12 @@
     <link rel="stylesheet" href="../index.css" />
     <title>Describe Waypoint</title>
   </head>
-  <body class="describe-marker grid">
-    <button data-trigger="save" class="col1">Save</button>
-    <button data-trigger="save" class="col4">Back</button>
-    <textarea class="col1-4" id="data"></textarea>
+  <body class="describe-marker grid margin padding dark">
+    <label class="col1-3" for="data">Describe this Waypoint</label>
+    <textarea class="col1-4 margin padding" id="title" placeholder="title"></textarea>
+    <textarea class="col1-4 margin padding" id="data" placeholder="about"></textarea>
+    <button type="button" data-trigger="save" class="col1-3">Save</button>
+    <button type="button" data-trigger="back" class="col4">Back</button>
     <script type="module">
       import { runDescribeMarker } from "../dist/index.js";
       runDescribeMarker();

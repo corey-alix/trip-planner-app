@@ -5,16 +5,35 @@
   --color-bright: #0ff;
 }
 
+body.dark {
+  background-color: var(--color-dark);
+  color: var(--color-light);
+}
+
+.dark textarea {
+  background-color: var(--color-dark);
+  color: var(--color-light);
+}
+
 body {
   padding: 0;
   margin: 0;
-  background-color: black;
 }
 
-body,
 #map {
-  height: 100vh;
-  width: 100vw;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.margin {
+  margin: 0.5rem;
+}
+
+.padding {
+  padding: 0.5rem;
 }
 
 glass {
@@ -65,12 +84,6 @@ glass {
   z-index: 10000;
 }
 
-#search {
-}
-
-#admin-menu {
-}
-
 .bright {
   color: var(--color-bright);
 }
@@ -118,7 +131,6 @@ body.describe-marker button {
 }
 
 body.describe-marker #data {
-  height: calc(100vh - 6rem);
+  height: calc(100vh - 12rem);
   resize: none;
-  padding: 1rem;
 }

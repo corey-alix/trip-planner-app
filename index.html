@@ -26,7 +26,7 @@
       run();
     </script>
   </head>
-  <body>
+  <body class="app">
     <div id="map"></div>
     <glass class="grid above-map">
       <select
@@ -34,15 +34,15 @@
         title="Admin Menu"
         class="col1-4 fill-width dark-background light-text above-map"
       >
-        <option></option>
+        <option data-trigger="toggle-search">Search</option>
         <option data-trigger="open-export-form">Export Map</option>
         <option data-trigger="open-import-form">Import Map</option>
       </select>
       <input
+        class="col1-4 hidden"
         type="text"
         id="search"
         placeholder="[search]"
-        class="col1-4"
         autocomplete="off"
       />
     </glass>
