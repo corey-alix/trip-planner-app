@@ -130,7 +130,9 @@ export function run() {
     input.addEventListener("change", async () => {
       const search = input.value;
       input.select();
-      const searchResults = await geocode(search);
+      let near = map.getCenter() as Leaflet.LatLngLiteral;
+      if (state.markerInfo?.center) near = state.markerInfo?.center;
+      const searchResults = await geocode(search, near);
       if (searchResults.features.length) {
         const result = searchResults.features[0];
         let text = result.properties.formatted;
@@ -415,9 +417,9 @@ function promptForKeys() {
   });
 }
 
-async function geocode(search: string) {
+async function geocode(search: string, near: { lng: number; lat: number }) {
   const response = await fetch(
-    `https://api.geoapify.com/v1/geocode/search?text=${search}&apiKey=${globals.geoapify.key}`
+    `https://api.geoapify.com/v1/geocode/search?text=${search}&bias=proximity:${near.lng},${near.lat}&apiKey=${globals.geoapify.key}`
   );
   const data = (await response.json()) as GeocodeReponse;
   return data;
