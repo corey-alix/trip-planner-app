@@ -79,6 +79,9 @@ export function run() {
       autoPan: true,
     });
 
+    state.marker = marker;
+    state.markerInfo = markerInfo;
+
     const content = document.createElement("div");
     content.classList.add("marker-content");
     marker.bindPopup(content);
