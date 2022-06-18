@@ -126,6 +126,12 @@ body.export-form #data {
   max-width: 20rem;
 }
 
+.marker-content button {
+  font-size: x-small;
+  border: none;
+  padding: 0.5rem;
+}
+
 body.describe-marker button {
   height: 2rem;
 }

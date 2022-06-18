@@ -186,6 +186,7 @@ export function run() {
             }
         }
         const markerInfo = { text, center } as MarkerInfo;
+        markerInfo.text = `search: ${input.value}`;
         trigger("add-marker", { markerInfo });
       }
     });
