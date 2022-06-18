@@ -26,7 +26,7 @@ glass {
 
 .grid {
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto auto auto auto;
 }
 
 .col1 {
@@ -41,8 +41,24 @@ glass {
   grid-column: 3;
 }
 
+.col4 {
+  grid-column: 4;
+}
+
+.col1-3 {
+  grid-column: 1 / 4;
+}
+
+.col1-4 {
+  grid-column: 1 / 5;
+}
+
 .col2-3 {
   grid-column: 2 / 4;
+}
+
+.col2-4 {
+  grid-column: 2 / 5;
 }
 
 .above-map {
@@ -50,11 +66,9 @@ glass {
 }
 
 #search {
-  margin: 0.5rem;
 }
 
 #admin-menu {
-  margin: 0.5rem;
 }
 
 .bright {
@@ -92,6 +106,9 @@ glass {
   min-height: 6rem;
 }
 
-.marker-content h2 {
-  height:4rem;
+.marker-content .title {
+  display: block;
+  min-height: 4rem;
+  font-size: 1rem;
+  max-width: 20rem;
 }

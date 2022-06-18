@@ -23,8 +23,10 @@ interface GeocodeReponse {
       lat: number;
       state_code: string;
       formatted: string;
+      name?: string;
       address_line1: string;
       address_line2: string;
+      street?: string;
       category: string;
       result_type: string;
       rank: {
@@ -40,7 +42,7 @@ interface GeocodeReponse {
       type: string;
       coordinates: number[];
     };
-    bbox: number[];
+    bbox?: number[];
   }[];
   query: {
     text: string;
@@ -73,9 +75,11 @@ export function run() {
     marker.bindPopup(content);
 
     marker.on("popupopen", () => {
-      content.innerHTML = `<h2>${markerInfo.text}</h2>
+      content.innerHTML = `<label class="title">${markerInfo.text}</label>
       <button data-event="move-marker-backward">Visit Sooner</button>
-      <button data-event="move-marker">${marker.dragging?.enabled() ? "Dock" : "Move"}</button>
+      <button data-event="move-marker">${
+        marker.dragging?.enabled() ? "Dock" : "Move"
+      }</button>
       <button data-event="delete-marker">Delete</button>
       `;
 
@@ -162,6 +166,7 @@ export function run() {
 
   const map = L.map("map", {
     zoomControl: false,
+    attributionControl: false,
   }).fitWorld();
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -322,11 +327,51 @@ function hookupSearch() {
     const searchResults = await geocode(search);
     if (searchResults.features.length) {
       const result = searchResults.features[0];
-      const text = result.properties.formatted;
-      const center = {
-        lng: (result.bbox[0] + result.bbox[2]) / 2,
-        lat: (result.bbox[1] + result.bbox[3]) / 2,
-      };
+      let text = result.properties.formatted;
+      switch (result.type) {
+        case "Feature":
+          switch (result.properties.result_type) {
+            case "building":
+              text = `${result.properties.address_line1}`;
+              break;
+            case "city":
+              text = `${result.properties.city}`;
+              break;
+            case "state":
+              text = `${result.properties.state}`;
+              break;
+            case "county":
+              text = result.properties.name!;
+              break;
+            case "street":
+              text = result.properties.street!;
+              break;
+            default:
+              console.log(
+                `unknown result_type: ${result.properties.result_type}`
+              );
+          }
+          debugger;
+          break;
+        default:
+          debugger;
+      }
+      let center: Leaflet.LatLngLiteral | null = null;
+      switch (result.geometry.type) {
+        case "Point":
+          center = {
+            lng: result.geometry.coordinates[0],
+            lat: result.geometry.coordinates[1],
+          };
+          break;
+        default:
+          if (result.bbox) {
+            center = {
+              lng: (result.bbox[0] + result.bbox[2]) / 2,
+              lat: (result.bbox[1] + result.bbox[3]) / 2,
+            };
+          }
+      }
       const markerInfo = { text, center } as MarkerInfo;
       trigger("add-marker", { markerInfo });
     }
