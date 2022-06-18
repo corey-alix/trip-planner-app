@@ -83,21 +83,20 @@ export function run() {
     state.markerInfo = markerInfo;
 
     const content = document.createElement("div");
-    content.classList.add("marker-content");
+    content.classList.add("marker-content", "grid");
     marker.bindPopup(content);
 
     marker.on("popupopen", () => {
-      content.innerHTML = `<div class="grid"><label class="title col1-4">${
+      content.innerHTML = `<label class="title col1-4">${
         markerInfo.text
       }</label>
-      <button data-trigger="directions-to-marker">Find Directions</button>
-      <button data-trigger="move-marker-backward">Visit Sooner</button>
-      <button data-trigger="move-marker">${
+      <button class="col1" data-trigger="directions-to-marker">Find Directions</button>
+      <button class="col1" data-trigger="move-marker-backward">Visit Sooner</button>
+      <button class="col1" data-trigger="move-marker">${
         marker.dragging?.enabled() ? "Prevent Dragging" : "Allow Dragging"
       }</button>
-      <button data-trigger="describe-marker">Edit Notes</button>
-      <button data-trigger="delete-marker">Remove from Route</button>
-      </div>
+      <button class="col1" data-trigger="describe-marker">Edit Notes</button>
+      <button class="col1" data-trigger="delete-marker">Remove from Route</button>
       `;
 
       const popupElement = marker.getPopup()?.getElement();
@@ -186,7 +185,7 @@ export function run() {
             }
         }
         const markerInfo = { text, center } as MarkerInfo;
-        markerInfo.text = `search: ${input.value}`;
+        markerInfo.about = `search: ${input.value}`;
         trigger("add-marker", { markerInfo });
       }
     });
