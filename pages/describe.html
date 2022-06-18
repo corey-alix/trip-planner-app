@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <link rel="stylesheet" href="../index.css" />
+    <title>Describe Waypoint</title>
+  </head>
+  <body class="describe-marker grid">
+    <button data-trigger="save" class="col1">Save</button>
+    <button data-trigger="save" class="col4">Back</button>
+    <textarea class="col1-4" id="data"></textarea>
+    <script type="module">
+      import { runDescribeMarker } from "../dist/index.js";
+      runDescribeMarker();
+    </script>
+  </body>
+</html>

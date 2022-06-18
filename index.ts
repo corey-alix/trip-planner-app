@@ -55,6 +55,8 @@ interface GeocodeReponse {
 }
 
 interface MarkerInfo {
+  id: number;
+  about: string;
   text: string;
   center: L.LatLngLiteral;
 }
@@ -64,6 +66,7 @@ export function run() {
   let polyline: Leaflet.Polyline;
 
   function createMarker(map: Leaflet.Map, markerInfo: MarkerInfo) {
+    markerInfo.id = markerInfo.id || uuid();
     const marker = L.marker(markerInfo.center, {
       title: markerInfo.text,
       draggable: false,
@@ -80,6 +83,7 @@ export function run() {
       <button data-event="move-marker">${
         marker.dragging?.enabled() ? "Dock" : "Move"
       }</button>
+      <button data-event="describe-marker">Notes</button>
       <button data-event="delete-marker">Delete</button>
       `;
 
@@ -90,13 +94,15 @@ export function run() {
         "move-marker-backward",
         "delete-marker",
         "move-marker",
+        "describe-marker",
       ];
-      const [backwardButton, deleteButton, moveButton] = selectors.map(
-        (id) =>
-          popupElement.querySelector(
-            `button[data-event='${id}']`
-          ) as HTMLButtonElement
-      );
+      const [backwardButton, deleteButton, moveButton, describeButton] =
+        selectors.map(
+          (id) =>
+            popupElement.querySelector(
+              `button[data-event='${id}']`
+            ) as HTMLButtonElement
+        );
 
       deleteButton?.addEventListener("click", () => {
         marker.remove();
@@ -114,6 +120,10 @@ export function run() {
           marker.dragging?.enable();
         }
         marker.closePopup();
+      });
+
+      describeButton?.addEventListener("click", () => {
+        window.location.href = `./pages/describe.html?marker=${markerInfo.id}`;
       });
     });
 
@@ -259,10 +269,31 @@ export function runImport() {
   });
 }
 
+export function runDescribeMarker() {
+  applyTriggers();
+  const markerId = new URLSearchParams(window.location.search).get("marker");
+  if (!markerId) return;
+  const markers = loadMarkers();
+  const marker = markers.find((m) => m.id + "" === markerId);
+  if (!marker) return;
+  const target = document.getElementById("data") as HTMLTextAreaElement;
+  target.value = marker.about || "";
+  on("save", () => {
+    marker.about = target.value;
+    saveMarkers(markers);
+    window.history.back();
+  });
+  on("back", () => {
+    window.history.back();
+  });
+}
+
 function loadMarkers() {
-  return JSON.parse(
+  const markers = JSON.parse(
     localStorage.getItem("markers") || "[]"
   ) as Array<MarkerInfo>;
+  markers.forEach((m) => (m.id = m.id || uuid()));
+  return markers;
 }
 
 // raise an HTML event
@@ -455,4 +486,7 @@ function debounce<T extends Function>(cb: T, wait = 20) {
 
 function saveMarkers(markers: MarkerInfo[]) {
   localStorage.setItem("markers", JSON.stringify(markers));
+}
+function uuid(): number {
+  return Date.now().valueOf();
 }

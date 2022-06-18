@@ -93,7 +93,7 @@ glass {
   bottom: 0;
 }
 
-.export-form #data {
+body.export-form #data {
   position: absolute;
   top: 6rem;
   bottom: 0;
@@ -111,4 +111,14 @@ glass {
   min-height: 4rem;
   font-size: 1rem;
   max-width: 20rem;
+}
+
+body.describe-marker button {
+  height: 2rem;
+}
+
+body.describe-marker #data {
+  height: calc(100vh - 6rem);
+  resize: none;
+  padding: 1rem;
 }
