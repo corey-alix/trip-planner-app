@@ -2,48 +2,50 @@ import * as Leaflet from "leaflet";
 
 declare const L: typeof Leaflet;
 
+interface GeocodeResultFeature {
+  type: string;
+  properties: {
+    datasource: {
+      sourcename: string;
+      attribution: string;
+      license: string;
+      url: string;
+    };
+    city: string;
+    county: string;
+    state: string;
+    country: string;
+    country_code: string;
+    town: string;
+    lon: number;
+    lat: number;
+    state_code: string;
+    formatted: string;
+    name?: string;
+    address_line1: string;
+    address_line2: string;
+    street?: string;
+    category: string;
+    result_type: string;
+    rank: {
+      importance: number;
+      popularity: number;
+      confidence: number;
+      confidence_city_level: number;
+      match_type: string;
+    };
+    place_id: string;
+  };
+  geometry: {
+    type: string;
+    coordinates: number[];
+  };
+  bbox?: number[];
+}
+
 interface GeocodeReponse {
   type: string;
-  features: {
-    type: string;
-    properties: {
-      datasource: {
-        sourcename: string;
-        attribution: string;
-        license: string;
-        url: string;
-      };
-      city: string;
-      county: string;
-      state: string;
-      country: string;
-      country_code: string;
-      town: string;
-      lon: number;
-      lat: number;
-      state_code: string;
-      formatted: string;
-      name?: string;
-      address_line1: string;
-      address_line2: string;
-      street?: string;
-      category: string;
-      result_type: string;
-      rank: {
-        importance: number;
-        popularity: number;
-        confidence: number;
-        confidence_city_level: number;
-        match_type: string;
-      };
-      place_id: string;
-    };
-    geometry: {
-      type: string;
-      coordinates: number[];
-    };
-    bbox?: number[];
-  }[];
+  features: GeocodeResultFeature[];
   query: {
     text: string;
     parsed: {
@@ -142,53 +144,8 @@ export function run() {
       const searchResults = await geocode(search, near);
       if (searchResults.features.length) {
         const result = searchResults.features[0];
-        let text = result.properties.formatted;
-        switch (result.type) {
-          case "Feature":
-            switch (result.properties.result_type) {
-              case "building":
-                text = `${result.properties.address_line1}`;
-                break;
-              case "city":
-                text = `${result.properties.city}`;
-                break;
-              case "state":
-                text = `${result.properties.state}`;
-                break;
-              case "county":
-                text = result.properties.name!;
-                break;
-              case "street":
-                text = result.properties.street!;
-                break;
-              case "postcode":
-                break;
-              default:
-                console.log(
-                  `unknown result_type: ${result.properties.result_type}`
-                );
-            }
-            break;
-          default:
-            console.log(`unknown type: ${result.type}`);
-            break;
-        }
-        let center: Leaflet.LatLngLiteral | null = null;
-        switch (result.geometry.type) {
-          case "Point":
-            center = {
-              lng: result.geometry.coordinates[0],
-              lat: result.geometry.coordinates[1],
-            };
-            break;
-          default:
-            if (result.bbox) {
-              center = {
-                lng: (result.bbox[0] + result.bbox[2]) / 2,
-                lat: (result.bbox[1] + result.bbox[3]) / 2,
-              };
-            }
-        }
+        const text = getFeatureText(result);
+        let center = getFeatureLocation(result);
         const markerInfo = { text, center } as MarkerInfo;
         markerInfo.about = `search: ${input.value}`;
         trigger("add-marker", { markerInfo });
@@ -349,6 +306,100 @@ export function run() {
   }
 }
 
+function getFeatureLocation(
+  result: GeocodeResultFeature
+): Leaflet.LatLngLiteral | null {
+  let center: Leaflet.LatLngLiteral | null = null;
+  switch (result.geometry.type) {
+    case "Point":
+      center = {
+        lng: result.geometry.coordinates[0],
+        lat: result.geometry.coordinates[1],
+      };
+      break;
+    default:
+      if (result.bbox) {
+        center = {
+          lng: (result.bbox[0] + result.bbox[2]) / 2,
+          lat: (result.bbox[1] + result.bbox[3]) / 2,
+        };
+      }
+  }
+  return center;
+}
+
+function getFeatureText(result: {
+  type: string;
+  properties: {
+    datasource: {
+      sourcename: string;
+      attribution: string;
+      license: string;
+      url: string;
+    };
+    city: string;
+    county: string;
+    state: string;
+    country: string;
+    country_code: string;
+    town: string;
+    lon: number;
+    lat: number;
+    state_code: string;
+    formatted: string;
+    name?: string;
+    address_line1: string;
+    address_line2: string;
+    street?: string;
+    category: string;
+    result_type: string;
+    rank: {
+      importance: number;
+      popularity: number;
+      confidence: number;
+      confidence_city_level: number;
+      match_type: string;
+    };
+    place_id: string;
+  };
+  geometry: {
+    type: string;
+    coordinates: number[];
+  };
+  bbox?: number[] | undefined;
+}) {
+  let text = result.properties.formatted;
+  switch (result.type) {
+    case "Feature":
+      switch (result.properties.result_type) {
+        case "building":
+          text = `${result.properties.address_line1}`;
+          break;
+        case "city":
+          text = `${result.properties.city}`;
+          break;
+        case "state":
+          text = `${result.properties.state}`;
+          break;
+        case "county":
+          text = result.properties.name!;
+          break;
+        case "street":
+          text = result.properties.street!;
+          break;
+        case "postcode":
+          break;
+        default:
+          console.log(`unknown result_type: ${result.properties.result_type}`);
+      }
+      break;
+    default:
+      console.log(`unknown type: ${result.type}`);
+      break;
+  }
+  return text;
+}
+
 export function runExport() {
   applyTriggers();
   const markers = loadMarkers();
@@ -478,8 +529,9 @@ export function runDescribeMarker() {
     const location = title.value;
     const bias = marker.center;
     const result = await geocode(location, { lng: bias.lng, lat: bias.lat });
-    marker.text = location;
-    marker.center = getPointLocation(result);
+    const f = result.features[0];
+    marker.text = getFeatureText(f);
+    marker.center = getFeatureLocation(f)!;
     saveMarkers(markers);
     window.history.back();
   });
@@ -640,16 +692,4 @@ function computeArrivalDate(markers: MarkerInfo[], id: number): string {
     return m.id === id;
   });
   return result;
-}
-
-function getPointLocation(result: GeocodeReponse): Leaflet.LatLngLiteral {
-  if (!result.features) throw "no features found";
-  const f = result.features[0];
-  if (!f.geometry) throw "no geometry found";
-  const g = f.geometry;
-  if (!g.coordinates) throw "no coordinates found";
-  const c = g.coordinates;
-  if (!c[1]) throw "no lat found";
-  if (!c[0]) throw "no lng found";
-  return { lat: c[1], lng: c[0] };
 }
