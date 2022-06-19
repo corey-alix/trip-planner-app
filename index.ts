@@ -2,6 +2,12 @@ import * as Leaflet from "leaflet";
 
 declare const L: typeof Leaflet;
 
+const tiles = {
+  alidade_smooth_dark:
+    "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
+  osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+};
+
 interface GeocodeResultFeature {
   type: string;
   properties: {
@@ -252,7 +258,7 @@ export function run() {
     attributionControl: false,
   });
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  L.tileLayer(tiles.alidade_smooth_dark, {
     maxZoom: 19,
     attribution:
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
