@@ -76,6 +76,19 @@ export function run() {
   let polyline: Leaflet.Polyline;
   const input = document.getElementById("search") as HTMLInputElement;
 
+  const icons = {
+    smallIcon: new L.Icon({
+      iconUrl: "./assets/marker-icon.png",
+      iconSize: [10, 12],
+      iconAnchor: [5, 12],
+    }),
+    bigIcon: new L.Icon({
+      iconUrl: "./assets/marker-icon.png",
+      iconSize: [20, 24],
+      iconAnchor: [10, 24],
+    }),
+  };
+
   function createMarker(map: Leaflet.Map, markerInfo: MarkerInfo) {
     markerInfo.id = markerInfo.id || uuid();
     const marker = L.marker(markerInfo.center, {
@@ -83,6 +96,7 @@ export function run() {
       draggable: false,
       autoPan: true,
       opacity: markerInfo.optional ? 0.5 : 1,
+      icon: markerInfo.departureDate ? icons.bigIcon : icons.smallIcon,
     });
 
     state.marker = marker;
@@ -132,6 +146,7 @@ export function run() {
     if (polyline) polyline.remove();
     polyline = L.polyline(bounds, {
       color: "green",
+      dashArray: "10, 10",
     }).addTo(map);
   }
 
