@@ -371,10 +371,12 @@ export function runDescribeMarker() {
   function createDateControl() {
     // convert date to yyyy-mm-dd format
     const formatDate = (date: Date) => {
-      const yyyy = date.getFullYear().toString();
-      const mm = (date.getMonth() + 1).toString();
-      const dd = date.getDate().toString();
-      return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+      const yyyy = date.getFullYear().toString().padStart(4, "0");
+      const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+      const dd = date.getDate().toString().padStart(2, "0");
+      const hours = date.getHours().toString().padStart(2, "0");
+      const minutes = date.getMinutes().toString().padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}T${hours}:${minutes}:00`;
     };
 
     if (marker?.arrivalDate && arrivalDate)
