@@ -136,7 +136,7 @@ body.export-form #data {
 }
 
 .marker-content button {
-  font-size: x-small;
+  font-size: 0.75rem;
   border: none;
   padding: 0.5rem;
 }

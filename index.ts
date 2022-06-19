@@ -59,8 +59,8 @@ interface MarkerInfo {
   about: string;
   text: string;
   center: L.LatLngLiteral;
-  arrivalDate: number;
-  departureDate: number;
+  arrivalDate: string;
+  departureDate: string;
 }
 
 export function run() {
@@ -251,7 +251,7 @@ export function run() {
   const map = L.map("map", {
     zoomControl: false,
     attributionControl: false,
-  }).fitWorld();
+  });
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -307,6 +307,8 @@ export function run() {
 
   if (center) {
     map.setView(center, zoom);
+  } else {
+    map.fitWorld();
   }
 
   drawPolylines(map);
@@ -346,62 +348,15 @@ export function runImport() {
 }
 
 export function runDescribeMarker() {
-  function createDateControl() {
-    const arrivalDate = document.getElementById(
-      "date-of-arrival"
-    ) as HTMLInputElement;
-    const departureDate = document.getElementById(
-      "date-of-departure"
-    ) as HTMLInputElement;
-    const isOvernight = document.getElementById(
-      "is-overnight-visit"
-    ) as HTMLInputElement;
-
-    // convert date to yyyy-mm-dd format
-    const formatDate = (date: Date) => {
-      const yyyy = date.getFullYear().toString();
-      const mm = (date.getMonth() + 1).toString();
-      const dd = date.getDate().toString();
-      return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-    };
-
-    if (marker?.arrivalDate && arrivalDate)
-      arrivalDate.value = formatDate(new Date(marker?.arrivalDate));
-    if (marker?.departureDate && departureDate)
-      departureDate.value = formatDate(new Date(marker?.departureDate));
-
-    isOvernight.checked = !!arrivalDate.value;
-
-    on("is-overnight", () => {
-      const isOvernightVisit = isOvernight.checked;
-      if (arrivalDate) {
-        arrivalDate.disabled = !isOvernightVisit;
-      }
-      if (departureDate) {
-        departureDate.disabled = !isOvernightVisit;
-      }
-
-      document.querySelectorAll(".for-overnight").forEach((el) => {
-        el.classList.toggle("hidden", !isOvernightVisit);
-      });
-    });
-
-    on("set-arrival-date", () => {
-      if (!marker) return;
-      if (!arrivalDate?.valueAsDate) return;
-      marker.arrivalDate = arrivalDate.valueAsDate.valueOf();
-      toaster("Arrival date set");
-    });
-
-    on("set-departure-date", () => {
-      if (!marker) return;
-      if (!departureDate?.valueAsDate) return;
-      marker.departureDate = departureDate.valueAsDate.valueOf();
-      toaster("Departure date set");
-    });
-
-    trigger("is-overnight");
-  }
+  const arrivalDate = document.getElementById(
+    "date-of-arrival"
+  ) as HTMLInputElement;
+  const departureDate = document.getElementById(
+    "date-of-departure"
+  ) as HTMLInputElement;
+  const isOvernight = document.getElementById(
+    "is-overnight-visit"
+  ) as HTMLInputElement;
 
   const markerId = new URLSearchParams(window.location.search).get("marker");
   if (!markerId) return;
@@ -413,12 +368,71 @@ export function runDescribeMarker() {
   const title = document.getElementById("title") as HTMLTextAreaElement;
   title.value = marker.text;
 
+  function createDateControl() {
+    // convert date to yyyy-mm-dd format
+    const formatDate = (date: Date) => {
+      const yyyy = date.getFullYear().toString();
+      const mm = (date.getMonth() + 1).toString();
+      const dd = date.getDate().toString();
+      return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    };
+
+    if (marker?.arrivalDate && arrivalDate)
+      arrivalDate.value = marker?.arrivalDate;
+    if (marker?.departureDate && departureDate)
+      departureDate.value = marker?.departureDate;
+
+    isOvernight.checked = !!arrivalDate.value;
+
+    on("is-overnight", () => {
+      const isOvernightVisit = isOvernight.checked;
+      if (arrivalDate) {
+        arrivalDate.disabled = !isOvernightVisit;
+        if (!isOvernightVisit) {
+          arrivalDate.value = computeArrivalDate(markers, marker!.id);
+        }
+      }
+      if (departureDate) {
+        departureDate.disabled = !isOvernightVisit;
+        if (!isOvernightVisit) {
+          departureDate.value = "";
+        } else {
+          if (!departureDate.value && arrivalDate.value) {
+            const d1 = new Date(arrivalDate.value);
+            console.log(arrivalDate.value, d1, d1.toDateString());
+            const d2 = new Date(d1.valueOf() + 86400000);
+            console.log(d2, d2.toDateString());
+            departureDate.value = formatDate(d2);
+          }
+        }
+      }
+
+      document.querySelectorAll(".for-overnight").forEach((el) => {
+        el.classList.toggle("hidden", !isOvernightVisit);
+      });
+    });
+
+    trigger("is-overnight");
+  }
+
   applyTriggers();
   createDateControl();
 
   on("save", () => {
     marker.text = title.value;
     marker.about = target.value;
+    if (arrivalDate?.value) {
+      marker.arrivalDate = arrivalDate.value;
+    } else {
+      marker.arrivalDate = "";
+    }
+
+    if (departureDate?.value) {
+      marker.departureDate = departureDate.value;
+    } else {
+      marker.departureDate = "";
+    }
+
     saveMarkers(markers);
     window.history.back();
   });
@@ -573,4 +587,13 @@ function saveMarkers(markers: MarkerInfo[]) {
 }
 function uuid(): number {
   return Date.now().valueOf();
+}
+
+function computeArrivalDate(markers: MarkerInfo[], id: number): string {
+  let result = "";
+  markers.some((m) => {
+    if (m.departureDate) result = m.departureDate;
+    return m.id === id;
+  });
+  return result;
 }
