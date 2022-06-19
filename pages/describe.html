@@ -14,21 +14,26 @@
       <textarea
         class="col1-4 margin padding"
         id="title"
-        placeholder="title"
+        placeholder="location"
       ></textarea>
       <div class="grid col1-4">
-        <label class="col1" for="checkbox">Overnight Stay?</label>
+        <label class="col1-2" for="checkbox">Optional?</label>
         <input
-          class="col4"
+          class="col3"
+          type="checkbox"
+          id="is-optional"
+          data-trigger="is-optional"
+        />
+        <label class="col1-2" for="checkbox">Overnight Stay?</label>
+        <input
+          class="col3"
           type="checkbox"
           id="is-overnight-visit"
           data-trigger="is-overnight"
         />
-        <label class="col1 for-overnight" for="date-of-arrival"
-          >Arrival Date</label
-        >
+        <label class="col1" for="date-of-arrival">Arrival Date</label>
         <input
-          class="col2-4 as-change"
+          class="col2-3 as-change"
           type="datetime-local"
           id="date-of-arrival"
           data-trigger="set-arrival-date"
@@ -37,7 +42,7 @@
           >Departure Date</label
         >
         <input
-          class="col2-4 as-change for-overnight"
+          class="col2-3 as-change for-overnight"
           type="datetime-local"
           id="date-of-departure"
           data-trigger="set-departure-date"
@@ -48,7 +53,10 @@
         id="data"
         placeholder="about"
       ></textarea>
-      <button type="button" data-trigger="save" class="col1-3">Save</button>
+      <button type="button" data-trigger="save" class="col1-2">Save</button>
+      <button type="button" data-trigger="geolocate" class="col3">
+        Relocate
+      </button>
       <button type="button" data-trigger="back" class="col4">Back</button>
       <script type="module">
         import { runDescribeMarker } from "../dist/index.js";

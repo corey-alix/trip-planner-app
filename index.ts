@@ -59,8 +59,9 @@ interface MarkerInfo {
   about: string;
   text: string;
   center: L.LatLngLiteral;
-  arrivalDate: string;
-  departureDate: string;
+  arrivalDate?: string;
+  departureDate?: string;
+  optional?: boolean;
 }
 
 export function run() {
@@ -79,6 +80,7 @@ export function run() {
       title: markerInfo.text,
       draggable: false,
       autoPan: true,
+      opacity: markerInfo.optional ? 0.5 : 1,
     });
 
     state.marker = marker;
@@ -97,8 +99,9 @@ export function run() {
       <button class="col1" data-trigger="move-marker">${
         marker.dragging?.enabled() ? "Prevent Dragging" : "Allow Dragging"
       }</button>
-      <button class="col1" data-trigger="describe-marker">Edit Notes</button>
-      <button class="col4" data-trigger="delete-marker">Remove from Route</button>
+      <button class="col4" data-trigger="describe-marker">Edit Notes</button>
+      <button class="col1" data-trigger="delete-marker">Remove from Route</button>
+      <button class="col4" data-trigger="insert-stop">Insert Stop</button>
       `;
 
       const popupElement = marker.getPopup()?.getElement();
@@ -211,6 +214,30 @@ export function run() {
   hookupSearch();
   upgradeDatabase();
 
+  on("insert-stop", () => {
+    const thisMarker = state.markerInfo;
+    if (!thisMarker) return;
+    const currentIndex = state.markers.indexOf(thisMarker);
+    const nextMarker = state.markers[currentIndex + 1];
+    if (!nextMarker) return;
+
+    const newInfo: MarkerInfo = {
+      id: uuid(),
+      about: "inserted stop",
+      text: "inserted stop",
+      center: {
+        lat: (thisMarker.center.lat + nextMarker.center.lat) / 2,
+        lng: (thisMarker.center.lng + nextMarker.center.lng) / 2,
+      },
+    };
+
+    // insert the new info
+    state.markers.splice(currentIndex + 1, 0, newInfo);
+    saveMarkers(state.markers);
+    drawPolylines(map);
+    createMarker(map, newInfo).openPopup();
+  });
+
   on("toggle-search", () => {
     input.classList.toggle("hidden");
   });
@@ -268,7 +295,7 @@ export function run() {
     const { markerInfo } = info;
     map.setView(markerInfo.center);
 
-    createMarker(map, markerInfo);
+    createMarker(map, markerInfo).openPopup();
     state.markers.push(markerInfo);
 
     saveMarkers(state.markers);
@@ -368,6 +395,9 @@ export function runDescribeMarker() {
   const title = document.getElementById("title") as HTMLTextAreaElement;
   title.value = marker.text;
 
+  const optional = document.getElementById("is-optional") as HTMLInputElement;
+  optional.checked = !!marker.optional;
+
   function createDateControl() {
     // convert date to yyyy-mm-dd format
     const formatDate = (date: Date) => {
@@ -421,6 +451,7 @@ export function runDescribeMarker() {
   createDateControl();
 
   on("save", () => {
+    marker.optional = optional.checked;
     marker.text = title.value;
     marker.about = target.value;
     if (arrivalDate?.value) {
@@ -438,7 +469,18 @@ export function runDescribeMarker() {
     saveMarkers(markers);
     window.history.back();
   });
+
   on("back", () => {
+    window.history.back();
+  });
+
+  on("geolocate", async () => {
+    const location = title.value;
+    const bias = marker.center;
+    const result = await geocode(location, { lng: bias.lng, lat: bias.lat });
+    marker.text = location;
+    marker.center = getPointLocation(result);
+    saveMarkers(markers);
     window.history.back();
   });
 }
@@ -598,4 +640,16 @@ function computeArrivalDate(markers: MarkerInfo[], id: number): string {
     return m.id === id;
   });
   return result;
+}
+
+function getPointLocation(result: GeocodeReponse): Leaflet.LatLngLiteral {
+  if (!result.features) throw "no features found";
+  const f = result.features[0];
+  if (!f.geometry) throw "no geometry found";
+  const g = f.geometry;
+  if (!g.coordinates) throw "no coordinates found";
+  const c = g.coordinates;
+  if (!c[1]) throw "no lat found";
+  if (!c[0]) throw "no lng found";
+  return { lat: c[1], lng: c[0] };
 }

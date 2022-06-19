@@ -147,5 +147,6 @@ body.describe-marker button {
 
 body.describe-marker #data {
   height: calc(100vh - 16rem);
+  min-height: 8rem;
   resize: none;
 }
