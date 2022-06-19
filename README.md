@@ -9,6 +9,6 @@ Add waypoints to a map and decorate each point with attributes
 - ✓ move, remove, reorder stops
 - ✓ import/export trip data
 - ✓ annotate markers (shower, campground, etc.)
-- ✓ user-defined annotations (name and symbol)
+- ✓ user-defined annotations (text, description, arrival, departure date)
 - ✓ open google maps for directions
 - ☐ annotation symbol appears as a colored circle on the marker itself

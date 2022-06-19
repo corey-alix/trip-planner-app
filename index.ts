@@ -59,6 +59,8 @@ interface MarkerInfo {
   about: string;
   text: string;
   center: L.LatLngLiteral;
+  arrivalDate: number;
+  departureDate: number;
 }
 
 export function run() {
@@ -91,12 +93,12 @@ export function run() {
         markerInfo.text
       }</label>
       <button class="col1" data-trigger="directions-to-marker">Find Directions</button>
-      <button class="col1" data-trigger="move-marker-backward">Visit Sooner</button>
+      <button class="col4" data-trigger="move-marker-backward">Visit Sooner</button>
       <button class="col1" data-trigger="move-marker">${
         marker.dragging?.enabled() ? "Prevent Dragging" : "Allow Dragging"
       }</button>
       <button class="col1" data-trigger="describe-marker">Edit Notes</button>
-      <button class="col1" data-trigger="delete-marker">Remove from Route</button>
+      <button class="col4" data-trigger="delete-marker">Remove from Route</button>
       `;
 
       const popupElement = marker.getPopup()?.getElement();
@@ -344,7 +346,63 @@ export function runImport() {
 }
 
 export function runDescribeMarker() {
-  applyTriggers();
+  function createDateControl() {
+    const arrivalDate = document.getElementById(
+      "date-of-arrival"
+    ) as HTMLInputElement;
+    const departureDate = document.getElementById(
+      "date-of-departure"
+    ) as HTMLInputElement;
+    const isOvernight = document.getElementById(
+      "is-overnight-visit"
+    ) as HTMLInputElement;
+
+    // convert date to yyyy-mm-dd format
+    const formatDate = (date: Date) => {
+      const yyyy = date.getFullYear().toString();
+      const mm = (date.getMonth() + 1).toString();
+      const dd = date.getDate().toString();
+      return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    };
+
+    if (marker?.arrivalDate && arrivalDate)
+      arrivalDate.value = formatDate(new Date(marker?.arrivalDate));
+    if (marker?.departureDate && departureDate)
+      departureDate.value = formatDate(new Date(marker?.departureDate));
+
+    isOvernight.checked = !!arrivalDate.value;
+
+    on("is-overnight", () => {
+      const isOvernightVisit = isOvernight.checked;
+      if (arrivalDate) {
+        arrivalDate.disabled = !isOvernightVisit;
+      }
+      if (departureDate) {
+        departureDate.disabled = !isOvernightVisit;
+      }
+
+      document.querySelectorAll(".for-overnight").forEach((el) => {
+        el.classList.toggle("hidden", !isOvernightVisit);
+      });
+    });
+
+    on("set-arrival-date", () => {
+      if (!marker) return;
+      if (!arrivalDate?.valueAsDate) return;
+      marker.arrivalDate = arrivalDate.valueAsDate.valueOf();
+      toaster("Arrival date set");
+    });
+
+    on("set-departure-date", () => {
+      if (!marker) return;
+      if (!departureDate?.valueAsDate) return;
+      marker.departureDate = departureDate.valueAsDate.valueOf();
+      toaster("Departure date set");
+    });
+
+    trigger("is-overnight");
+  }
+
   const markerId = new URLSearchParams(window.location.search).get("marker");
   if (!markerId) return;
   const markers = loadMarkers();
@@ -354,6 +412,9 @@ export function runDescribeMarker() {
   target.value = marker.about || "";
   const title = document.getElementById("title") as HTMLTextAreaElement;
   title.value = marker.text;
+
+  applyTriggers();
+  createDateControl();
 
   on("save", () => {
     marker.text = title.value;
@@ -472,6 +533,10 @@ function applyTriggers(scope: HTMLElement | Document = document) {
       e.addEventListener("touchend", (e) => {
         enabled = false;
         e.preventDefault();
+      });
+    } else if (e.classList.contains("as-change")) {
+      e.addEventListener("change", (e) => {
+        trigger(eventName, e);
       });
     } else {
       e.addEventListener("click", () => {

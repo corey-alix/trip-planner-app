@@ -8,15 +8,53 @@
     <link rel="stylesheet" href="../index.css" />
     <title>Describe Waypoint</title>
   </head>
-  <body class="describe-marker grid margin padding dark">
-    <label class="col1-3" for="data">Describe this Waypoint</label>
-    <textarea class="col1-4 margin padding" id="title" placeholder="title"></textarea>
-    <textarea class="col1-4 margin padding" id="data" placeholder="about"></textarea>
-    <button type="button" data-trigger="save" class="col1-3">Save</button>
-    <button type="button" data-trigger="back" class="col4">Back</button>
-    <script type="module">
-      import { runDescribeMarker } from "../dist/index.js";
-      runDescribeMarker();
-    </script>
+  <body class="describe-marker margin padding dark">
+    <form class="grid margin">
+      <label class="col1-3" for="data">Describe this Waypoint</label>
+      <textarea
+        class="col1-4 margin padding"
+        id="title"
+        placeholder="title"
+      ></textarea>
+      <div class="grid col1-4">
+        <label class="col1" for="checkbox">Overnight Stay?</label>
+        <input
+          class="col4"
+          type="checkbox"
+          id="is-overnight-visit"
+          data-trigger="is-overnight"
+        />
+        <label class="col1 for-overnight" for="date-of-arrival"
+          >Arrival Date</label
+        >
+        <input
+          class="col2-4 as-change for-overnight"
+          type="date"
+          id="date-of-arrival"
+          data-trigger="set-arrival-date"
+        />
+        <label class="col1 for-overnight" for="date-of-arrival"
+          >Departure Date</label
+        >
+        <input
+          class="col2-4 as-change for-overnight"
+          type="date"
+          id="date-of-departure"
+          data-trigger="set-departure-date"
+        />
+      </div>
+      <textarea
+        class="col1-4 margin padding"
+        id="data"
+        placeholder="about"
+      ></textarea>
+      <button type="button" data-trigger="save" class="col1-3">Save</button>
+      <button type="button" data-trigger="back" class="col4">Back</button>
+      <script type="module">
+        import { runDescribeMarker } from "../dist/index.js";
+        runDescribeMarker();
+      </script>
+    </form>
+    <div class="toaster hidden" id="toaster">[toaster]</div>
   </body>
 </html>
