@@ -150,3 +150,13 @@ body.describe-marker #data {
   min-height: 8rem;
   resize: none;
 }
+
+body.dark input {
+  background-color: var(--color-dark);
+  color: var(--color-light);
+}
+
+body.dark select {
+  background-color: var(--color-dark);
+  color: var(--color-light);
+}

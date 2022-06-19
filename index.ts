@@ -5,6 +5,8 @@ declare const L: typeof Leaflet;
 const tiles = {
   alidade_smooth_dark:
     "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
+    outdoors:
+    "https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png",
   osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 };
 
@@ -258,7 +260,7 @@ export function run() {
     attributionControl: false,
   });
 
-  L.tileLayer(tiles.alidade_smooth_dark, {
+  L.tileLayer(tiles.outdoors, {
     maxZoom: 19,
     attribution:
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
