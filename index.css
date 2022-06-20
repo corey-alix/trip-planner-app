@@ -124,11 +124,6 @@ body.export-form #data {
   right: 0;
 }
 
-.marker-content {
-  width: min(20rem, 50vw);
-  min-height: 6rem;
-}
-
 .marker-content .title {
   display: block;
   min-height: 4rem;
