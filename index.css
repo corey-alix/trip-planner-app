@@ -148,6 +148,9 @@ body.describe-marker button {
 body.describe-marker #data {
   height: calc(100vh - 16rem);
   min-height: 8rem;
+}
+
+.no-resize {
   resize: none;
 }
 
@@ -159,4 +162,8 @@ body.dark input {
 body.dark select {
   background-color: var(--color-dark);
   color: var(--color-light);
+}
+
+input[type="datetime-local"] {
+  text-align: right;
 }

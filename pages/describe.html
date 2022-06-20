@@ -8,48 +8,48 @@
     <link rel="stylesheet" href="../index.css" />
     <title>Describe Waypoint</title>
   </head>
-  <body class="describe-marker margin padding dark">
+  <body class="describe-marker dark">
     <form class="grid margin">
       <label class="col1-3" for="data">Describe this Waypoint</label>
       <textarea
-        class="col1-4 margin padding"
+        class="col1-4 margin padding no-resize"
         id="title"
         placeholder="location"
       ></textarea>
-      <div class="grid col1-3">
-        <label class="col1-2" for="checkbox">Optional?</label>
+      <div class="grid col1-4">
+        <label class="col1-3" for="is-optional">Optional?</label>
         <input
-          class="col3"
+          class="col4"
           type="checkbox"
           id="is-optional"
           data-trigger="is-optional"
         />
-        <label class="col1-2" for="checkbox">Overnight Stay?</label>
+        <label class="col1-3" for="is-overnight-visit">Overnight Stay?</label>
         <input
-          class="col3"
+          class="col4"
           type="checkbox"
           id="is-overnight-visit"
           data-trigger="is-overnight"
         />
         <label class="col1" for="date-of-arrival">Arrival Date</label>
         <input
-          class="col2-3 as-change"
+          class="col2-4 as-change"
           type="datetime-local"
           id="date-of-arrival"
           data-trigger="set-arrival-date"
         />
-        <label class="col1 for-overnight" for="date-of-arrival"
+        <label class="col1 for-overnight" for="date-of-departure"
           >Departure Date</label
         >
         <input
-          class="col2-3 as-change for-overnight"
+          class="col2-4 as-change for-overnight"
           type="datetime-local"
           id="date-of-departure"
           data-trigger="set-departure-date"
         />
       </div>
       <textarea
-        class="col1-4 margin padding"
+        class="col1-4 margin padding no-resize"
         id="data"
         placeholder="about"
       ></textarea>

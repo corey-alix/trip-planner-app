@@ -5,8 +5,7 @@ declare const L: typeof Leaflet;
 const tiles = {
   alidade_smooth_dark:
     "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
-    outdoors:
-    "https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png",
+  outdoors: "https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png",
   osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 };
 
@@ -79,6 +78,7 @@ export function run() {
     markerInfo: null as MarkerInfo | null,
     marker: null as Leaflet.Marker | null,
     markers: loadMarkers(),
+    markerHash: new Map<number, Leaflet.Marker>(),
   };
 
   let polyline: Leaflet.Polyline;
@@ -87,13 +87,13 @@ export function run() {
   const icons = {
     smallIcon: new L.Icon({
       iconUrl: "./assets/marker-icon.png",
-      iconSize: [10, 12],
-      iconAnchor: [5, 12],
+      iconSize: [10 * ICON_SCALE, 12 * ICON_SCALE],
+      iconAnchor: [5 * ICON_SCALE, 12 * ICON_SCALE],
     }),
     bigIcon: new L.Icon({
       iconUrl: "./assets/marker-icon.png",
-      iconSize: [20, 24],
-      iconAnchor: [10, 24],
+      iconSize: [20 * ICON_SCALE, 24 * ICON_SCALE],
+      iconAnchor: [10 * ICON_SCALE, 24 * ICON_SCALE],
     }),
   };
 
@@ -107,6 +107,16 @@ export function run() {
       icon: markerInfo.departureDate ? icons.bigIcon : icons.smallIcon,
     });
 
+    const actionState = {
+      mapMarker: marker,
+      marker: markerInfo,
+      markers: state.markers,
+    };
+
+    [GotoNextMarkerAction, GotoPriorMarkerAction].forEach((Action) => {
+      injectAction(actionState, new Action());
+    });
+
     state.marker = marker;
     state.markerInfo = markerInfo;
 
@@ -118,14 +128,14 @@ export function run() {
       content.innerHTML = `<label class="title col1-4">${
         markerInfo.text
       }</label>
-      <button class="col1" data-trigger="directions-to-marker">Find Directions</button>
-      <button class="col4" data-trigger="move-marker-backward">Visit Sooner</button>
-      <button class="col1" data-trigger="move-marker">${
+      <button type="button" data-trigger="directions-to-marker">Find Directions</button>
+      <button type="button" data-trigger="move-marker-backward">Visit Sooner</button>
+      <button type="button" data-trigger="move-marker">${
         marker.dragging?.enabled() ? "Prevent Dragging" : "Allow Dragging"
       }</button>
-      <button class="col4" data-trigger="describe-marker">Edit Notes</button>
-      <button class="col1" data-trigger="delete-marker">Remove from Route</button>
-      <button class="col4" data-trigger="insert-stop">Insert Stop</button>
+      <button type="button" data-trigger="describe-marker">Edit Notes</button>
+      <button type="button" data-trigger="delete-marker">Remove from Route</button>
+      <button type="button" data-trigger="insert-stop">Insert Stop</button>
       `;
 
       const popupElement = marker.getPopup()?.getElement();
@@ -144,6 +154,7 @@ export function run() {
     });
 
     marker.addTo(map);
+    state.markerHash.set(markerInfo.id, marker);
     return marker;
   }
 
@@ -193,6 +204,12 @@ export function run() {
   promptForKeys();
   hookupSearch();
   upgradeDatabase();
+
+  on("popup", (args: { marker: MarkerInfo }) => {
+    const marker = state.markerHash.get(args.marker.id);
+    map.flyTo(args.marker.center);
+    marker?.openPopup();
+  });
 
   on("insert-stop", () => {
     const thisMarker = state.markerInfo;
@@ -541,11 +558,11 @@ export function runDescribeMarker() {
     }
 
     saveMarkers(markers);
-    window.history.back();
+    trigger("back");
   });
 
   on("back", () => {
-    window.history.back();
+    window.location.href = "../index.html";
   });
 
   on("geolocate", async () => {
@@ -588,6 +605,8 @@ function on(trigger: string, callback: (node: any) => void) {
     callback(e.detail.node);
   });
 }
+
+const ICON_SCALE = 1.6;
 
 const globals = {
   geoapify: {
@@ -715,4 +734,53 @@ function computeArrivalDate(markers: MarkerInfo[], id: number): string {
     return m.id === id;
   });
   return result;
+}
+
+interface IAction {
+  name: string;
+  execute: (state: IActionState) => void;
+}
+
+interface IActionState {
+  mapMarker: Leaflet.Marker;
+  marker: MarkerInfo;
+  markers: Array<MarkerInfo>;
+}
+
+class GotoNextMarkerAction {
+  name = "Next Stop";
+  execute(actionState: IActionState) {
+    const { marker, markers } = actionState;
+    const index = markers.indexOf(marker);
+    const next = markers[index + 1];
+    if (!next) return;
+    trigger("popup", { marker: next });
+  }
+}
+
+class GotoPriorMarkerAction {
+  name = "Previous Stop";
+  execute(actionState: IActionState) {
+    const { marker, markers } = actionState;
+    const index = markers.indexOf(marker);
+    if (index <= 0) return;
+    const next = markers[index - 1];
+    trigger("popup", { marker: next });
+  }
+}
+
+function injectAction(state: IActionState, action: IAction) {
+  const { mapMarker } = state;
+  mapMarker.on("popupopen", async () => {
+    await sleep(0);
+    const dom = mapMarker.getPopup()!.getContent() as HTMLElement;
+    const button = document.createElement("button");
+    button.innerHTML = action.name;
+    button.addEventListener("click", () => action.execute(state));
+    dom.appendChild(button);
+  });
+}
+
+async function sleep(ticks: number) {
+  return new Promise((resolve) => setTimeout(resolve, ticks));
 }
