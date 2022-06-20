@@ -121,11 +121,11 @@ export function run() {
     state.markerInfo = markerInfo;
 
     const content = document.createElement("div");
-    content.classList.add("marker-content", "grid");
+    content.classList.add("marker-content", "grid-2");
     marker.bindPopup(content);
 
     marker.on("popupopen", () => {
-      content.innerHTML = `<label class="title col1-4">${
+      content.innerHTML = `<label class="title col1-2">${
         markerInfo.text
       }</label>
       <button type="button" data-trigger="directions-to-marker">Find Directions</button>
@@ -268,8 +268,14 @@ export function run() {
   });
 
   on("directions-to-marker", () => {
-    if (!state.markerInfo) return;
-    window.location.href = `https://www.google.com/maps/place/${state.markerInfo.center.lat},${state.markerInfo.center.lng}`;
+    const to = state.markerInfo;
+    if (!to) return;
+    const from = state.markers[state.markers.indexOf(to) - 1];
+    if (!from) {
+      window.location.href = `https://www.google.com/maps/place/${to.center.lat},${to.center.lng}`;
+    } else {
+      window.location.href = `https://www.google.com/maps?saddr=${from.center.lat},${from.center.lng}&daddr=${to.center.lat},${to.center.lng}`;
+    }
   });
 
   const map = L.map("map", {
@@ -465,16 +471,45 @@ export function runImport() {
   });
 }
 
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export function runDescribeMarker() {
   const arrivalDate = document.getElementById(
     "date-of-arrival"
   ) as HTMLInputElement;
+
   const departureDate = document.getElementById(
     "date-of-departure"
   ) as HTMLInputElement;
   const isOvernight = document.getElementById(
     "is-overnight-visit"
   ) as HTMLInputElement;
+
+  const reactive = {
+    ".arrival-date-label": (dom: HTMLElement) => {
+      arrivalDate.addEventListener("change", () => {
+        const text = arrivalDate.value
+          ? `Arrive ${DAYS[new Date(arrivalDate.value).getDay()]}`
+          : "Arrive: ";
+        dom.innerHTML = text;
+      });
+    },
+    ".departure-date-label": (dom: HTMLElement) => {
+      departureDate.addEventListener("change", () => {
+        const text = departureDate.value
+          ? `Depart ${DAYS[new Date(departureDate.value).getDay()]}`
+          : "Depart: ";
+        dom.innerHTML = text;
+      });
+    },
+  };
+
+  keys(reactive).forEach((selector) => {
+    const targets = Array.from(document.querySelectorAll(selector));
+    targets.forEach((target) => {
+      const handler = reactive[selector];
+      handler(<HTMLElement>target);
+    });
+  });
 
   const markerId = new URLSearchParams(window.location.search).get("marker");
   if (!markerId) return;
@@ -575,6 +610,10 @@ export function runDescribeMarker() {
     saveMarkers(markers);
     window.history.back();
   });
+}
+
+function keys<T>(reactive: T) {
+  return Object.keys(reactive) as Array<keyof T>;
 }
 
 function loadMarkers() {

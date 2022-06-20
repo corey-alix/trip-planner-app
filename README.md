@@ -11,7 +11,8 @@ Add waypoints to a map and decorate each point with attributes
 - ✓ annotate markers (shower, campground, etc.)
 - ✓ user-defined annotations (text, description, arrival, departure date)
 - ✓ decorate a stop as optional (different color marker)
-- ✓ open google maps for directions
+- ✓ open google maps for directions from prior stop
 - ✓ ability to insert a waypoint
 - ✓ ability to navigate forward/backward
+- ✓ show day-name for arrival/departure dates
 - ☐ annotation symbol appears as a colored circle on the marker itself
