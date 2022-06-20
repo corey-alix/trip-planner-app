@@ -81,6 +81,11 @@ export function run() {
     markerHash: new Map<number, Leaflet.Marker>(),
   };
 
+  // extract query param for "center"
+  const centerQueryParam = new URLSearchParams(window.location.search).get(
+    "center"
+  );
+
   let polyline: Leaflet.Polyline;
   const input = document.getElementById("search") as HTMLInputElement;
 
@@ -274,6 +279,7 @@ export function run() {
     if (!from) {
       window.location.href = `https://www.google.com/maps/place/${to.center.lat},${to.center.lng}`;
     } else {
+      // https://www.google.com/maps?saddr=My+Location&daddr=43.12345,-76.12345
       window.location.href = `https://www.google.com/maps?saddr=${from.center.lat},${from.center.lng}&daddr=${to.center.lat},${to.center.lng}`;
     }
   });
@@ -329,11 +335,15 @@ export function run() {
     drawPolylines(map);
   });
 
-  const center = JSON.parse(
+  const zoom = JSON.parse(localStorage.getItem("mapZoom") || "0") as number;
+
+  let center = JSON.parse(
     localStorage.getItem("mapCenter") || "null"
   ) as Leaflet.LatLngLiteral;
 
-  const zoom = JSON.parse(localStorage.getItem("mapZoom") || "0") as number;
+  if (centerQueryParam) {
+    center = JSON.parse(centerQueryParam) as Leaflet.LatLngLiteral;
+  }
 
   if (center) {
     map.setView(center, zoom);
@@ -535,10 +545,15 @@ export function runDescribeMarker() {
       return `${yyyy}-${mm}-${dd}T${hours}:${minutes}:00`;
     };
 
-    if (marker?.arrivalDate && arrivalDate)
+    if (marker?.arrivalDate && arrivalDate) {
       arrivalDate.value = marker?.arrivalDate;
-    if (marker?.departureDate && departureDate)
+      // trigger change event
+      arrivalDate.dispatchEvent(new Event("change"));
+    }
+    if (marker?.departureDate && departureDate) {
       departureDate.value = marker?.departureDate;
+      departureDate.dispatchEvent(new Event("change"));
+    }
 
     isOvernight.checked = !!arrivalDate.value;
 
@@ -548,6 +563,7 @@ export function runDescribeMarker() {
         arrivalDate.disabled = !isOvernightVisit;
         if (!isOvernightVisit) {
           arrivalDate.value = computeArrivalDate(markers, marker!.id);
+          arrivalDate.dispatchEvent(new Event("change"));
         }
       }
       if (departureDate) {
@@ -561,6 +577,7 @@ export function runDescribeMarker() {
             const d2 = new Date(d1.valueOf() + 86400000);
             console.log(d2, d2.toDateString());
             departureDate.value = formatDate(d2);
+            departureDate.dispatchEvent(new Event("change"));
           }
         }
       }
@@ -604,11 +621,12 @@ export function runDescribeMarker() {
     const location = title.value;
     const bias = marker.center;
     const result = await geocode(location, { lng: bias.lng, lat: bias.lat });
-    const f = result.features[0];
+    const f = getClosestFeature(result, bias);
+    if (!f) return;
     marker.text = getFeatureText(f);
     marker.center = getFeatureLocation(f)!;
     saveMarkers(markers);
-    window.history.back();
+    window.location.href = `../index.html?center={"lng":${marker.center.lng},"lat":${marker.center.lat}}`;
   });
 }
 
@@ -822,4 +840,29 @@ function injectAction(state: IActionState, action: IAction) {
 
 async function sleep(ticks: number) {
   return new Promise((resolve) => setTimeout(resolve, ticks));
+}
+function getClosestFeature(
+  result: GeocodeReponse,
+  bias: Leaflet.LatLngLiteral
+) {
+  let distance = Infinity;
+  let closestFeature: GeocodeResultFeature | null = null;
+  result.features.forEach((feature) => {
+    if (feature.geometry.type !== "Point") return;
+    const d = distanceTo(bias, {
+      lat: feature.geometry.coordinates[1],
+      lng: feature.geometry.coordinates[0],
+    });
+    if (d < distance) {
+      closestFeature = feature;
+      distance = d;
+    }
+  });
+  return closestFeature;
+}
+
+function distanceTo(p1: Leaflet.LatLngLiteral, p2: Leaflet.LatLngLiteral) {
+  const dx = p2.lng - p1.lng;
+  const dy = p2.lat - p1.lat;
+  return Math.sqrt(dx * dx + dy * dy);
 }
