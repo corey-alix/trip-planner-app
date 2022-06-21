@@ -194,6 +194,14 @@ export function run() {
     });
 
     marker.addTo(map);
+    if (markerInfo.arrivalDate) {
+    L.marker(markerInfo.center, {
+      icon: L.divIcon({
+        html: `<b class="shadow">${DAYS[new Date(markerInfo.arrivalDate).getDay()]}</b>`,
+        className: "text-below-marker",
+      }),
+    }).addTo(map);
+  }
     state.markerHash.set(markerInfo.id, marker);
     return marker;
   }
