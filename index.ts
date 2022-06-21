@@ -448,6 +448,7 @@ export function runImport() {
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export function runDescribeMarker() {
+  promptForKeys();
   const arrivalDate = document.getElementById(
     "date-of-arrival"
   ) as HTMLInputElement;
