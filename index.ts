@@ -478,7 +478,7 @@ export function runDescribeMarker() {
     },
   };
 
-  keys(reactive).forEach((selector) => {
+  getKeys(reactive).forEach((selector) => {
     const targets = Array.from(document.querySelectorAll(selector));
     targets.forEach((target) => {
       const handler = reactive[selector];
@@ -599,7 +599,7 @@ export function runDescribeMarker() {
   });
 }
 
-function keys<T>(reactive: T) {
+function getKeys<T>(reactive: T) {
   return Object.keys(reactive) as Array<keyof T>;
 }
 
@@ -646,20 +646,24 @@ const globals = {
 };
 
 function promptForKey(key: keyof typeof globals) {
-  const value = prompt(`Enter value for ${globals[key].about}`);
+  const value = prompt(
+    `Enter value for ${globals[key].about}`,
+    globals[key].key
+  );
   if (!value) return "";
   globals[key].key = value;
   return value;
 }
 
 function promptForKeys() {
-  const keys = Object.keys(globals) as Array<keyof typeof globals>;
+  const keys = getKeys(globals);
   keys.forEach((k) => {
     let value = localStorage.getItem(k) as string;
     if (!value) {
       value = promptForKey(k);
       if (value) localStorage.setItem(k, value);
     }
+    globals[k].key = value;
   });
 }
 
