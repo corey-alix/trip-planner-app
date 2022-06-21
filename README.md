@@ -22,3 +22,4 @@ Add waypoints to a map and decorate each point with attributes
 ## Fixes
 
 - ✓ select feature closest to prior stop
+- ✓ use google geocoder instead of geoapify

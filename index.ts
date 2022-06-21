@@ -2,6 +2,41 @@ import * as Leaflet from "leaflet";
 
 declare const L: typeof Leaflet;
 
+interface GeocodeResult {
+  text: string;
+  center: {
+    lat: number;
+    lng: number;
+  };
+}
+
+interface GoogleGeocoderResponse {
+  results: Array<{
+    address_components: Array<{
+      long_name: string;
+      short_name: string;
+      types: Array<string>;
+    }>;
+    formatted_address: string;
+    geometry: {
+      location: Leaflet.LatLngLiteral;
+      location_type: "GEOMETRIC_CENTER";
+      viewport: {
+        northeast: Leaflet.LatLngLiteral;
+        southwest: Leaflet.LatLngLiteral;
+      };
+    };
+    partial_match: boolean;
+    place_id: string;
+    plus_code: {
+      compound_code: string;
+      global_code: string;
+    };
+    types: Array<string>;
+  }>;
+  status: "OK" | "?";
+}
+
 const tiles = {
   alidade_smooth_dark:
     "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
@@ -9,7 +44,7 @@ const tiles = {
   osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 };
 
-interface GeocodeResultFeature {
+interface GeoapifyGeocodeResultFeature {
   type: string;
   properties: {
     datasource: {
@@ -50,9 +85,9 @@ interface GeocodeResultFeature {
   bbox?: number[];
 }
 
-interface GeocodeReponse {
+interface GeoapifyGeocodeReponse {
   type: string;
-  features: GeocodeResultFeature[];
+  features: GeoapifyGeocodeResultFeature[];
   query: {
     text: string;
     parsed: {
@@ -180,13 +215,14 @@ export function run() {
       input.select();
       let near = map.getCenter() as Leaflet.LatLngLiteral;
       if (state.markerInfo?.center) near = state.markerInfo?.center;
-      const searchResults = await geocode(search, near);
-      if (searchResults.features.length) {
-        const result = searchResults.features[0];
-        const text = getFeatureText(result);
-        let center = getFeatureLocation(result);
+      const rawResults = await GoogleApi.geocode(search, near);
+      const searchResults = GoogleApi.normalize(rawResults);
+      if (searchResults.length) {
+        const result = searchResults[0];
+        const text = result.text;
+        let center = result.center;
         const markerInfo = { text, center } as MarkerInfo;
-        markerInfo.about = `search: ${input.value}`;
+        markerInfo.about = `search: ${input.value}\n${markerInfo.about || ""}`;
         trigger("add-marker", { markerInfo });
       }
     });
@@ -318,6 +354,7 @@ export function run() {
     if (index > -1) {
       markers.splice(index, 1);
       drawPolylines(map);
+      saveMarkers(state.markers);
       toaster("Marker Deleted");
     }
   });
@@ -363,7 +400,7 @@ export function run() {
 }
 
 function getFeatureLocation(
-  result: GeocodeResultFeature
+  result: GeoapifyGeocodeResultFeature
 ): Leaflet.LatLngLiteral | null {
   let center: Leaflet.LatLngLiteral | null = null;
   switch (result.geometry.type) {
@@ -382,78 +419,6 @@ function getFeatureLocation(
       }
   }
   return center;
-}
-
-function getFeatureText(result: {
-  type: string;
-  properties: {
-    datasource: {
-      sourcename: string;
-      attribution: string;
-      license: string;
-      url: string;
-    };
-    city: string;
-    county: string;
-    state: string;
-    country: string;
-    country_code: string;
-    town: string;
-    lon: number;
-    lat: number;
-    state_code: string;
-    formatted: string;
-    name?: string;
-    address_line1: string;
-    address_line2: string;
-    street?: string;
-    category: string;
-    result_type: string;
-    rank: {
-      importance: number;
-      popularity: number;
-      confidence: number;
-      confidence_city_level: number;
-      match_type: string;
-    };
-    place_id: string;
-  };
-  geometry: {
-    type: string;
-    coordinates: number[];
-  };
-  bbox?: number[] | undefined;
-}) {
-  let text = result.properties.formatted;
-  switch (result.type) {
-    case "Feature":
-      switch (result.properties.result_type) {
-        case "building":
-          text = `${result.properties.address_line1}`;
-          break;
-        case "city":
-          text = `${result.properties.city}`;
-          break;
-        case "state":
-          text = `${result.properties.state}`;
-          break;
-        case "county":
-          text = result.properties.name!;
-          break;
-        case "street":
-          text = result.properties.street!;
-          break;
-        case "postcode":
-          break;
-        default:
-          console.log(`unknown result_type: ${result.properties.result_type}`);
-      }
-      break;
-    default:
-      console.log(`unknown type: ${result.type}`);
-      break;
-  }
-  return text;
 }
 
 export function runExport() {
@@ -620,11 +585,15 @@ export function runDescribeMarker() {
   on("geolocate", async () => {
     const location = title.value;
     const bias = marker.center;
-    const result = await geocode(location, { lng: bias.lng, lat: bias.lat });
+    const rawResult = await GoogleApi.geocode(location, {
+      lng: bias.lng,
+      lat: bias.lat,
+    });
+    const result = GoogleApi.normalize(rawResult);
     const f = getClosestFeature(result, bias);
     if (!f) return;
-    marker.text = getFeatureText(f);
-    marker.center = getFeatureLocation(f)!;
+    marker.text = f.text;
+    marker.center = f.center;
     saveMarkers(markers);
     window.location.href = `../index.html?center={"lng":${marker.center.lng},"lat":${marker.center.lat}}`;
   });
@@ -668,7 +637,11 @@ const ICON_SCALE = 1.6;
 const globals = {
   geoapify: {
     about: "geoapify key",
-    key: "9bae5097c2ab40e7af125fe7c7d03021",
+    key: "",
+  },
+  googleapi: {
+    about: "google api key",
+    key: "",
   },
 };
 
@@ -690,12 +663,81 @@ function promptForKeys() {
   });
 }
 
-async function geocode(search: string, near: { lng: number; lat: number }) {
-  const response = await fetch(
-    `https://api.geoapify.com/v1/geocode/search?text=${search}&bias=proximity:${near.lng},${near.lat}&apiKey=${globals.geoapify.key}`
-  );
-  const data = (await response.json()) as GeocodeReponse;
-  return data;
+class Geoapify {
+  static async geocode(search: string, near: { lng: number; lat: number }) {
+    const response = await fetch(
+      `https://api.geoapify.com/v1/geocode/search?text=${search}&bias=proximity:${near.lng},${near.lat}&apiKey=${globals.geoapify.key}`
+    );
+    const data = (await response.json()) as GeoapifyGeocodeReponse;
+    return data;
+  }
+
+  static normalize(data: GeoapifyGeocodeReponse): Array<GeocodeResult> {
+    return data.features.map((f) => ({
+      text: f.properties.name || "unknown",
+      center: {
+        lng: f.geometry.coordinates[0],
+        lat: f.geometry.coordinates[1],
+      },
+    }));
+  }
+
+  static getFeatureText(result: GeoapifyGeocodeResultFeature): string {
+    let text = result.properties.formatted;
+    switch (result.type) {
+      case "Feature":
+        switch (result.properties.result_type) {
+          case "building":
+            text = `${result.properties.address_line1}`;
+            break;
+          case "city":
+            text = `${result.properties.city}`;
+            break;
+          case "state":
+            text = `${result.properties.state}`;
+            break;
+          case "county":
+            text = result.properties.name!;
+            break;
+          case "street":
+            text = result.properties.street!;
+            break;
+          case "postcode":
+            break;
+          default:
+            console.log(
+              `unknown result_type: ${result.properties.result_type}`
+            );
+        }
+        break;
+      default:
+        console.log(`unknown type: ${result.type}`);
+        break;
+    }
+    return text;
+  }
+}
+
+class GoogleApi {
+  static async geocode(search: string, near: Leaflet.LatLngLiteral) {
+    // url encode the search term
+    const encodedSearch = encodeURIComponent(search);
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedSearch}&bounds=${near.lat},${near.lng}%7C,${near.lat},${near.lng}&key=${globals.googleapi.key}`
+    );
+    const data = (await response.json()) as GoogleGeocoderResponse;
+    return data;
+  }
+
+  static normalize(response: GoogleGeocoderResponse): Array<GeocodeResult> {
+    return response.results.map((r) => ({
+      text: r.formatted_address,
+      center: {
+        lat: r.geometry.location.lat,
+        lng: r.geometry.location.lng,
+      },
+    }));
+  }
 }
 
 function upgradeDatabase() {
@@ -841,18 +883,15 @@ function injectAction(state: IActionState, action: IAction) {
 async function sleep(ticks: number) {
   return new Promise((resolve) => setTimeout(resolve, ticks));
 }
+
 function getClosestFeature(
-  result: GeocodeReponse,
+  result: Array<GeocodeResult>,
   bias: Leaflet.LatLngLiteral
 ) {
   let distance = Infinity;
-  let closestFeature: GeocodeResultFeature | null = null;
-  result.features.forEach((feature) => {
-    if (feature.geometry.type !== "Point") return;
-    const d = distanceTo(bias, {
-      lat: feature.geometry.coordinates[1],
-      lng: feature.geometry.coordinates[0],
-    });
+  let closestFeature: GeocodeResult | undefined;
+  result.forEach((feature) => {
+    const d = distanceTo(bias, feature.center);
     if (d < distance) {
       closestFeature = feature;
       distance = d;
