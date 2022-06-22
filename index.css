@@ -46,6 +46,7 @@ glass {
 .grid-2 {
   display: grid;
   grid-template-columns: auto auto;
+  grid-template-rows: 2rem auto;
 }
 
 .grid {
@@ -141,8 +142,11 @@ body.export-form #data {
 
 .marker-content button {
   font-size: 0.75rem;
-  border: none;
+  background-color: var(--color-light);
+  color: var(--color-dark);
+  border: 1px solid var(--color-dark);
   padding: 0.5rem;
+  margin: 0.1rem;
 }
 
 body.describe-marker button {
@@ -179,4 +183,12 @@ input[type="datetime-local"] {
 .shadow {
   color: black;
   text-shadow: 1px 1px 2px white;
+}
+
+.underline {
+  text-decoration: underline;
+}
+
+.bold {
+  font-weight: bold;
 }

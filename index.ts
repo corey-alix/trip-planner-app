@@ -127,13 +127,13 @@ export function run() {
   const icons = {
     smallIcon: new L.Icon({
       iconUrl: "./assets/marker-icon.png",
-      iconSize: [10 * ICON_SCALE, 12 * ICON_SCALE],
-      iconAnchor: [5 * ICON_SCALE, 12 * ICON_SCALE],
+      iconSize: [6 * ICON_SCALE, 10 * ICON_SCALE],
+      iconAnchor: [3 * ICON_SCALE, 10 * ICON_SCALE],
     }),
-    bigIcon: new L.Icon({
+    largeIcon: new L.Icon({
       iconUrl: "./assets/marker-icon.png",
-      iconSize: [20 * ICON_SCALE, 24 * ICON_SCALE],
-      iconAnchor: [10 * ICON_SCALE, 24 * ICON_SCALE],
+      iconSize: [12 * ICON_SCALE, 20 * ICON_SCALE],
+      iconAnchor: [6 * ICON_SCALE, 20 * ICON_SCALE + 3],
     }),
   };
 
@@ -144,7 +144,7 @@ export function run() {
       draggable: false,
       autoPan: true,
       opacity: markerInfo.optional ? 0.5 : 1,
-      icon: markerInfo.departureDate ? icons.bigIcon : icons.smallIcon,
+      icon: markerInfo.arrivalDate ? icons.largeIcon : icons.smallIcon,
     });
 
     const actionState = {
@@ -153,7 +153,7 @@ export function run() {
       markers: state.markers,
     };
 
-    [GotoNextMarkerAction, GotoPriorMarkerAction].forEach((Action) => {
+    [GotoPriorMarkerAction,GotoNextMarkerAction].forEach((Action) => {
       injectAction(actionState, new Action());
     });
 
@@ -165,17 +165,24 @@ export function run() {
     marker.bindPopup(content);
 
     marker.on("popupopen", () => {
-      content.innerHTML = `<label class="title col1-2">${
+      const date = new Date(
+        computeArrivalDate(state.markers, markerInfo.id)
+      ).toDateString();
+      content.innerHTML = `<label class="title col1-2 bold">${date}</label><label class="title col1-2">${
         markerInfo.text
       }</label>
-      <button type="button" data-trigger="directions-to-marker">Find Directions</button>
-      <button type="button" data-trigger="move-marker-backward">Visit Sooner</button>
-      <button type="button" data-trigger="move-marker">${
+      <div class="col1 grid-2">
+      <button class="col1-2" type="button" data-trigger="directions-to-marker">Find Directions</button>
+      <button class="col1-2" type="button" data-trigger="move-marker-backward">Visit Sooner</button>
+      <button class="col1-2" type="button" data-trigger="move-marker">${
         marker.dragging?.enabled() ? "Prevent Dragging" : "Allow Dragging"
       }</button>
-      <button type="button" data-trigger="describe-marker">Edit Notes</button>
-      <button type="button" data-trigger="delete-marker">Remove from Route</button>
-      <button type="button" data-trigger="insert-stop">Insert Stop</button>
+      </div>
+      <div class="col2 grid-2">
+      <button class="col1-2"  type="button" data-trigger="describe-marker">Edit Notes</button>
+      <button class="col1-2"  type="button" data-trigger="delete-marker">Remove from Route</button>
+      <button class="col1-2"  type="button" data-trigger="insert-stop">Insert Stop</button>
+      </div>
       `;
 
       const popupElement = marker.getPopup()?.getElement();
@@ -190,31 +197,54 @@ export function run() {
       const { lat, lng } = marker.getLatLng();
       markerInfo.center = { lat, lng };
       saveMarkers(state.markers);
-      drawPolylines(map);
+      decorateStops(map);
     });
 
     marker.addTo(map);
-    if (markerInfo.arrivalDate) {
-    L.marker(markerInfo.center, {
-      icon: L.divIcon({
-        html: `<b class="shadow">${DAYS[new Date(markerInfo.arrivalDate).getDay()]}</b>`,
-        className: "text-below-marker",
-      }),
-    }).addTo(map);
-  }
     state.markerHash.set(markerInfo.id, marker);
     return marker;
   }
 
-  function drawPolylines(map: Leaflet.Map) {
+  function decorateStops(map: Leaflet.Map) {
     const bounds = state.markers.map(
       (m) => [m.center.lat, m.center.lng] as Leaflet.LatLngTuple
     );
     if (polyline) polyline.remove();
     polyline = L.polyline(bounds, {
       color: "green",
-      dashArray: "10, 10",
+      dashArray: "1, 16",
     }).addTo(map);
+
+    let firstArrivalDate: Date;
+    let priorDepartureDate: Date;
+    state.markers.forEach((m) => {
+      let title = "";
+      if (m.arrivalDate) {
+        const arrivalDate = new Date(m.arrivalDate!);
+        firstArrivalDate = firstArrivalDate || arrivalDate;
+        const firstDay =
+          epochDays(arrivalDate) - epochDays(firstArrivalDate) + 1;
+        title = `${firstDay}`;
+        L.marker(m.center, {
+          icon: L.divIcon({
+            iconAnchor: [0, 15],
+            html: `<p class="shadow">${title}</p>`,
+            className: "text-below-marker",
+          }),
+        }).addTo(map);
+      } else if (priorDepartureDate) {
+        title = DAYS[priorDepartureDate.getDay()];
+        L.marker(m.center, {
+          icon: L.divIcon({
+            html: `<p class="shadow">${title}</p>`,
+            className: "text-below-marker",
+          }),
+        }).addTo(map);
+      }
+      if (m.departureDate) {
+        priorDepartureDate = new Date(m.departureDate);
+      }
+    });
   }
 
   function hookupSearch() {
@@ -280,7 +310,7 @@ export function run() {
     // insert the new info
     state.markers.splice(currentIndex + 1, 0, newInfo);
     saveMarkers(state.markers);
-    drawPolylines(map);
+    decorateStops(map);
     createMarker(map, newInfo).openPopup();
   });
 
@@ -352,7 +382,7 @@ export function run() {
     state.markers.push(markerInfo);
 
     saveMarkers(state.markers);
-    drawPolylines(map);
+    decorateStops(map);
   });
 
   on("delete-marker", () => {
@@ -361,7 +391,7 @@ export function run() {
     const index = markers.indexOf(markerInfo);
     if (index > -1) {
       markers.splice(index, 1);
-      drawPolylines(map);
+      decorateStops(map);
       saveMarkers(state.markers);
       toaster("Marker Deleted");
     }
@@ -377,7 +407,7 @@ export function run() {
       markers[index] = temp;
       saveMarkers(markers);
     }
-    drawPolylines(map);
+    decorateStops(map);
   });
 
   const zoom = JSON.parse(localStorage.getItem("mapZoom") || "0") as number;
@@ -396,7 +426,7 @@ export function run() {
     map.fitWorld();
   }
 
-  drawPolylines(map);
+  decorateStops(map);
 
   if (state.markers.length) {
     state.markers.forEach((m) => createMarker(map, m));
@@ -887,6 +917,8 @@ function injectAction(state: IActionState, action: IAction) {
     await sleep(0);
     const dom = mapMarker.getPopup()!.getContent() as HTMLElement;
     const button = document.createElement("button");
+    button.type = "button";
+    //button.classList.add("col1-2");
     button.innerHTML = action.name;
     button.addEventListener("click", () => action.execute(state));
     dom.appendChild(button);
@@ -917,4 +949,8 @@ function distanceTo(p1: Leaflet.LatLngLiteral, p2: Leaflet.LatLngLiteral) {
   const dx = p2.lng - p1.lng;
   const dy = p2.lat - p1.lat;
   return Math.sqrt(dx * dx + dy * dy);
+}
+function epochDays(date: Date) {
+  const ticksPerDay = 1000 * 60 * 60 * 24;
+  return Math.floor(date.valueOf() / ticksPerDay);
 }
