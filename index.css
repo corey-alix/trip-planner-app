@@ -192,3 +192,13 @@ input[type="datetime-local"] {
 .bold {
   font-weight: bold;
 }
+
+.visit.overnight {
+  color: darkred;
+  font-size: larger;
+}
+
+.visit.no-overnight {
+  color: darkred;
+  font-size: smaller;
+}

@@ -227,8 +227,8 @@ export function run() {
         title = `${firstDay}`;
         L.marker(m.center, {
           icon: L.divIcon({
-            iconAnchor: [0, 15],
-            html: `<p class="shadow">${title}</p>`,
+            iconAnchor: [5, 80],
+            html: `<p class="shadow visit overnight">${title}</p>`,
             className: "text-below-marker",
           }),
         }).addTo(map);
@@ -236,7 +236,8 @@ export function run() {
         title = DAYS[priorDepartureDate.getDay()];
         L.marker(m.center, {
           icon: L.divIcon({
-            html: `<p class="shadow">${title}</p>`,
+            iconAnchor: [30, 30],
+            html: `<p class="shadow visit no-overnight">${title}</p>`,
             className: "text-below-marker",
           }),
         }).addTo(map);
