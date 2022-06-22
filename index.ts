@@ -153,7 +153,7 @@ export function run() {
       markers: state.markers,
     };
 
-    [GotoPriorMarkerAction,GotoNextMarkerAction].forEach((Action) => {
+    [GotoPriorMarkerAction, GotoNextMarkerAction].forEach((Action) => {
       injectAction(actionState, new Action());
     });
 
@@ -952,6 +952,7 @@ function distanceTo(p1: Leaflet.LatLngLiteral, p2: Leaflet.LatLngLiteral) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 function epochDays(date: Date) {
+  // timezone offset
   const ticksPerDay = 1000 * 60 * 60 * 24;
-  return Math.floor(date.valueOf() / ticksPerDay);
+  return Math.floor((date.valueOf() - date.getTimezoneOffset() * 60 * 1000) / ticksPerDay);
 }

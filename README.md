@@ -18,6 +18,8 @@ Add waypoints to a map and decorate each point with attributes
 - ✓ ability to navigate forward/backward
 - ✓ show day-name for arrival/departure dates
 - ☐ annotation symbol appears as a colored circle on the marker itself
+- ☐ PWA with cache-first access
+- ☐ backup to Fauna
 
 ## Fixes
 
