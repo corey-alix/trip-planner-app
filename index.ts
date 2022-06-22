@@ -117,9 +117,9 @@ export function run() {
   };
 
   // extract query param for "center"
-  const centerQueryParam = new URLSearchParams(window.location.search).get(
-    "center"
-  );
+  const temp = new URLSearchParams(window.location.search);
+  const zoomQueryParam = temp.get("zoom");
+  const centerQueryParam = temp.get("center");
 
   let polyline: Leaflet.Polyline;
   const input = document.getElementById("search") as HTMLInputElement;
@@ -411,7 +411,7 @@ export function run() {
     decorateStops(map);
   });
 
-  const zoom = JSON.parse(localStorage.getItem("mapZoom") || "0") as number;
+  let zoom = JSON.parse(localStorage.getItem("mapZoom") || "0") as number;
 
   let center = JSON.parse(
     localStorage.getItem("mapCenter") || "null"
@@ -419,6 +419,10 @@ export function run() {
 
   if (centerQueryParam) {
     center = JSON.parse(centerQueryParam) as Leaflet.LatLngLiteral;
+  }
+
+  if (zoomQueryParam) {
+    zoom = JSON.parse(zoomQueryParam) as number;
   }
 
   if (center) {
@@ -618,8 +622,8 @@ export function runDescribeMarker() {
     trigger("back");
   });
 
-  on("back", () => {
-    window.location.href = "../index.html";
+  on("zoom", () => {
+    window.location.href = `../index.html?center={"lng":${marker.center.lng},"lat":${marker.center.lat}}&zoom=17`;
   });
 
   on("geolocate", async () => {
