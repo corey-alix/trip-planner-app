@@ -12,11 +12,14 @@
     <form class="grid margin">
       <label class="col1-3" for="data">Describe this Waypoint</label>
       <textarea
-        class="col1-4 margin padding no-resize"
+        class="col1-3 margin padding no-resize"
         id="title"
         placeholder="location"
       ></textarea>
-      <div class="grid col1-4">
+      <button type="button" data-trigger="geolocate" class="col4">
+        Search
+      </button>
+    <div class="grid col1-4">
         <label class="col1-3" for="is-optional">Optional?</label>
         <input
           class="col4"
@@ -57,11 +60,12 @@
         id="data"
         placeholder="about"
       ></textarea>
-      <button type="button" data-trigger="save" class="col1-2">Save</button>
-      <button type="button" data-trigger="geolocate" class="col3">
-        Relocate
-      </button>
-      <button type="button" data-trigger="back" class="col4">Back</button>
+      <div class="toolbar col1-4 grid-4">
+        <button type="button" data-trigger="save" class="col1">Save</button>
+        <button type="button" data-trigger="prior-marker" class="col2">Previous</button>
+        <button type="button" data-trigger="next-marker" class="col3">Next</button>
+        <button type="button" data-trigger="back" class="col4">Cancel</button>
+      </div>
       <script type="module">
         import { runDescribeMarker } from "../dist/index.js";
         runDescribeMarker();

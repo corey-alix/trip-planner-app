@@ -17,6 +17,7 @@ Add waypoints to a map and decorate each point with attributes
 - ✓ ability to insert a waypoint
 - ✓ ability to navigate forward/backward
 - ✓ show day-name for arrival/departure dates
+- ✓ navigate forward/backward in detail viewer
 - ☐ annotation symbol appears as a colored circle on the marker itself
 - ☐ PWA with cache-first access
 - ☐ backup to Fauna

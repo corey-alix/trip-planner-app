@@ -637,6 +637,20 @@ export function runDescribeMarker() {
     saveMarkers(markers);
     window.location.href = `../index.html?center={"lng":${marker.center.lng},"lat":${marker.center.lat}}`;
   });
+
+  on("prior-marker", () => {
+    const index = markers.findIndex((m) => m.id === marker.id);
+    const target = markers[index - 1];
+    if (index <= 0) return;
+    window.location.href = `./describe.html?marker=${target.id}`;
+  });
+
+  on("next-marker", () => {
+    const index = markers.findIndex((m) => m.id === marker.id);
+    const target = markers[index + 1];
+    if (!target) return;
+    if (index > 0) window.location.href = `./describe.html?marker=${target.id}`;
+  });
 }
 
 function getKeys<T>(reactive: T) {
@@ -954,5 +968,7 @@ function distanceTo(p1: Leaflet.LatLngLiteral, p2: Leaflet.LatLngLiteral) {
 function epochDays(date: Date) {
   // timezone offset
   const ticksPerDay = 1000 * 60 * 60 * 24;
-  return Math.floor((date.valueOf() - date.getTimezoneOffset() * 60 * 1000) / ticksPerDay);
+  return Math.floor(
+    (date.valueOf() - date.getTimezoneOffset() * 60 * 1000) / ticksPerDay
+  );
 }
