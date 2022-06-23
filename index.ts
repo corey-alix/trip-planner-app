@@ -109,6 +109,8 @@ interface MarkerInfo {
 }
 
 export function run() {
+  installServiceWorker();
+
   const state = {
     markerInfo: null as MarkerInfo | null,
     marker: null as Leaflet.Marker | null,
@@ -969,10 +971,27 @@ function distanceTo(p1: Leaflet.LatLngLiteral, p2: Leaflet.LatLngLiteral) {
   const dy = p2.lat - p1.lat;
   return Math.sqrt(dx * dx + dy * dy);
 }
+
 function epochDays(date: Date) {
   // timezone offset
   const ticksPerDay = 1000 * 60 * 60 * 24;
   return Math.floor(
     (date.valueOf() - date.getTimezoneOffset() * 60 * 1000) / ticksPerDay
   );
+}
+
+/**
+ * Install a service workder to cache the app.
+ */
+function installServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("./sw.js")
+      .then(() => {
+        console.log("Service worker installed");
+      })
+      .catch((err) => {
+        console.error("Service worker failed to install", err);
+      });
+  }
 }

@@ -21,6 +21,12 @@ Add waypoints to a map and decorate each point with attributes
 - ☐ annotation symbol appears as a colored circle on the marker itself
 - ☐ PWA with cache-first access
 - ☐ backup to Fauna
+- ☐ provide an app key and it sets the Fauna, google API and mapify keys in the client (requires Netlify lambda)
+
+## Issues
+
+How to create a netlify lambda with secret keys without exposing them via github in a public project?
+Netlify has variables so I guess the node code leverages those plus Fauna to store secure configuration
 
 ## Fixes
 
