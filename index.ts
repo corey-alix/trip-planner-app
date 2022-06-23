@@ -229,7 +229,6 @@ export function run() {
         title = `${firstDay}`;
         L.marker(m.center, {
           icon: L.divIcon({
-            iconAnchor: [5, 80],
             html: `<p class="shadow visit overnight">${title}</p>`,
             className: "text-below-marker",
           }),
@@ -621,7 +620,7 @@ export function runDescribeMarker() {
     }
 
     saveMarkers(markers);
-    trigger("back");
+    toaster("saved");
   });
 
   on("zoom", () => {

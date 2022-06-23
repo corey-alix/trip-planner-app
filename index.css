@@ -2,7 +2,7 @@
   font-size: min(1rem, 6vw);
   --color-dark: #1a1a1a;
   --color-light: #fff;
-  --color-bright: #0ff;
+  --color-bright: #00f;
 }
 
 body.dark {
@@ -194,11 +194,15 @@ input[type="datetime-local"] {
 }
 
 .visit.overnight {
-  color: darkred;
-  font-size: larger;
+  color: var(--color-dark);
+  font-size: 10pt;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background-color: var(--color-light);
 }
 
 .visit.no-overnight {
-  color: darkred;
-  font-size: smaller;
+  color: var(--color-bright);
+  display: none;
 }
