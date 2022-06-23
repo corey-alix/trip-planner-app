@@ -443,28 +443,6 @@ export function run() {
   }
 }
 
-function getFeatureLocation(
-  result: GeoapifyGeocodeResultFeature
-): Leaflet.LatLngLiteral | null {
-  let center: Leaflet.LatLngLiteral | null = null;
-  switch (result.geometry.type) {
-    case "Point":
-      center = {
-        lng: result.geometry.coordinates[0],
-        lat: result.geometry.coordinates[1],
-      };
-      break;
-    default:
-      if (result.bbox) {
-        center = {
-          lng: (result.bbox[0] + result.bbox[2]) / 2,
-          lat: (result.bbox[1] + result.bbox[3]) / 2,
-        };
-      }
-  }
-  return center;
-}
-
 export function runExport() {
   applyTriggers();
   const markers = loadMarkers();
@@ -645,15 +623,15 @@ export function runDescribeMarker() {
 
   on("prior-marker", () => {
     const index = markers.findIndex((m) => m.id === marker.id);
-    const target = markers[index - 1];
     if (index <= 0) return;
+    const target = markers[index - 1];
     window.location.href = `./describe.html?marker=${target.id}`;
   });
 
   on("next-marker", () => {
     const index = markers.findIndex((m) => m.id === marker.id);
+    if (index >= markers.length) return;
     const target = markers[index + 1];
-    if (!target) return;
     if (index > 0) window.location.href = `./describe.html?marker=${target.id}`;
   });
 }
