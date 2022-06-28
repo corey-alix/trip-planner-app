@@ -34,7 +34,7 @@ interface GoogleGeocoderResponse {
     };
     types: Array<string>;
   }>;
-  status: "OK" | "?";
+  status: "OK" | "ZERO_RESULTS";
 }
 
 const tiles = {
@@ -585,13 +585,14 @@ export function runDescribeMarker() {
     marker.optional = optional.checked;
     marker.text = title.value;
     marker.about = target.value;
-    if (arrivalDate?.value) {
+    const persistDates = isOvernight.checked;
+    if (persistDates && arrivalDate?.value) {
       marker.arrivalDate = arrivalDate.value;
     } else {
       marker.arrivalDate = "";
     }
 
-    if (departureDate?.value) {
+    if (persistDates && departureDate?.value) {
       marker.departureDate = departureDate.value;
     } else {
       marker.departureDate = "";
@@ -614,7 +615,10 @@ export function runDescribeMarker() {
     });
     const result = GoogleApi.normalize(rawResult);
     const f = getClosestFeature(result, bias);
-    if (!f) return;
+    if (!f) {
+      toaster("Nothing found");
+      return;
+    }
     marker.text = f.text;
     marker.center = f.center;
     saveMarkers(markers);
