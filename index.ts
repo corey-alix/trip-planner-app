@@ -317,11 +317,34 @@ export function run() {
   });
 
   on("goto-current-location", () => {
-    debugger;
     navigator.geolocation.getCurrentPosition((pos) => {
-    debugger;
     const { latitude, longitude } = pos.coords;
       map.flyTo({ lat: latitude, lng: longitude });
+    });
+  });
+
+  let locationTrackingHandler = 0;
+  let locationMarker: L.CircleMarker | null = null;
+  on("track-current-location", () => {
+    if (locationTrackingHandler) {
+      navigator.geolocation.clearWatch(locationTrackingHandler);
+      locationTrackingHandler = 0;
+      locationMarker?.remove();
+      locationMarker = null;
+      return;
+    }
+    locationTrackingHandler = navigator.geolocation.watchPosition((pos) => {
+    const { latitude, longitude } = pos.coords;
+      const location = { lat: latitude, lng: longitude };
+      map.flyTo(location);
+      if (!locationMarker) {
+        locationMarker = L.circleMarker(location, {
+          color: "orange",
+          radius: 12,
+        });
+        locationMarker.addTo(map);
+      }
+      locationMarker.setLatLng(location);
     });
   });
 
