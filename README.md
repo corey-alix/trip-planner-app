@@ -19,14 +19,16 @@ Add waypoints to a map and decorate each point with attributes
 - ✓ show day-name for arrival/departure dates
 - ✓ navigate forward/backward in detail viewer
 - ☐ annotation symbol appears as a colored circle on the marker itself
-- ☐ PWA with cache-first access
+- ✓ PWA with cache-first access
 - ☐ backup to Fauna
 - ☐ provide an app key and it sets the Fauna, google API and mapify keys in the client (requires Netlify lambda)
+- ☐ add a stop with long-press popup
+- ✓ center map at current location/show current location
 
 ## Issues
 
-How to create a netlify lambda with secret keys without exposing them via github in a public project?
-Netlify has variables so I guess the node code leverages those plus Fauna to store secure configuration
+☐ How to create a netlify lambda with secret keys without exposing them via github in a public project?
+☐ Netlify has variables so I guess the node code leverages those plus Fauna to store secure configuration
 
 ## Fixes
 

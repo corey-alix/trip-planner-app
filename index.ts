@@ -316,6 +316,15 @@ export function run() {
     createMarker(map, newInfo).openPopup();
   });
 
+  on("goto-current-location", () => {
+    debugger;
+    navigator.geolocation.getCurrentPosition((pos) => {
+    debugger;
+    const { latitude, longitude } = pos.coords;
+      map.flyTo({ lat: latitude, lng: longitude });
+    });
+  });
+
   on("toggle-search", () => {
     input.classList.toggle("hidden");
   });
