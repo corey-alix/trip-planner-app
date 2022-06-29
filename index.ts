@@ -594,9 +594,6 @@ export function runDescribeMarker() {
   const departureDate = document.getElementById(
     "date-of-departure"
   ) as HTMLInputElement;
-  const isOvernight = document.getElementById(
-    "is-overnight-visit"
-  ) as HTMLInputElement;
 
   const reactive = {
     ".arrival-date-label": (dom: HTMLElement) => {
@@ -653,45 +650,13 @@ export function runDescribeMarker() {
       arrivalDate.value = marker?.arrivalDate;
       // trigger change event
       arrivalDate.dispatchEvent(new Event("change"));
+    } else {
+      arrivalDate.value = computeArrivalDate(markers, marker!.id);
     }
     if (marker?.departureDate && departureDate) {
       departureDate.value = marker?.departureDate;
       departureDate.dispatchEvent(new Event("change"));
     }
-
-    isOvernight.checked = !!arrivalDate.value;
-
-    on("is-overnight", () => {
-      const isOvernightVisit = isOvernight.checked;
-      if (arrivalDate) {
-        arrivalDate.disabled = !isOvernightVisit;
-        if (!isOvernightVisit) {
-          arrivalDate.value = computeArrivalDate(markers, marker!.id);
-          arrivalDate.dispatchEvent(new Event("change"));
-        }
-      }
-      if (departureDate) {
-        departureDate.disabled = !isOvernightVisit;
-        if (!isOvernightVisit) {
-          departureDate.value = "";
-        } else {
-          if (!departureDate.value && arrivalDate.value) {
-            const d1 = new Date(arrivalDate.value);
-            console.log(arrivalDate.value, d1, d1.toDateString());
-            const d2 = new Date(d1.valueOf() + 86400000);
-            console.log(d2, d2.toDateString());
-            departureDate.value = formatDate(d2);
-            departureDate.dispatchEvent(new Event("change"));
-          }
-        }
-      }
-
-      document.querySelectorAll(".for-overnight").forEach((el) => {
-        el.classList.toggle("hidden", !isOvernightVisit);
-      });
-    });
-
-    trigger("is-overnight");
   }
 
   applyTriggers();
@@ -701,19 +666,8 @@ export function runDescribeMarker() {
     marker.optional = optional.checked;
     marker.text = title.value;
     marker.about = target.value;
-    const persistDates = isOvernight.checked;
-    if (persistDates && arrivalDate?.value) {
-      marker.arrivalDate = arrivalDate.value;
-    } else {
-      marker.arrivalDate = "";
-    }
-
-    if (persistDates && departureDate?.value) {
-      marker.departureDate = departureDate.value;
-    } else {
-      marker.departureDate = "";
-    }
-
+    marker.arrivalDate = arrivalDate?.value || "";
+    marker.departureDate = departureDate?.value || "";
     saveMarkers(markers);
     toaster("saved");
   });
@@ -743,16 +697,30 @@ export function runDescribeMarker() {
 
   on("prior-marker", () => {
     const index = markers.findIndex((m) => m.id === marker.id);
-    if (index <= 0) return;
+    if (index < 0) {
+      toaster("Marker not found");
+      return;
+    }
+    if (index - 1 < 0) {
+      toaster("Prior marker not found");
+      return;
+    }
     const target = markers[index - 1];
     window.location.href = `./describe.html?marker=${target.id}`;
   });
 
   on("next-marker", () => {
     const index = markers.findIndex((m) => m.id === marker.id);
-    if (index >= markers.length) return;
+    if (index < 0) {
+      toaster("Marker not found");
+      return;
+    }
+    if (index + 1 >= markers.length) {
+      toaster("Next marker not found");
+      return;
+    }
     const target = markers[index + 1];
-    if (index > 0) window.location.href = `./describe.html?marker=${target.id}`;
+    window.location.href = `./describe.html?marker=${target.id}`;
   });
 }
 
@@ -1023,7 +991,10 @@ class GotoNextMarkerAction {
     const { marker, markers } = actionState;
     const index = markers.indexOf(marker);
     const next = markers[index + 1];
-    if (!next) return;
+    if (!next) {
+      toaster("Prior Stop not found");
+      return;
+    }
     trigger("popup", { marker: next });
   }
 }
@@ -1033,7 +1004,10 @@ class GotoPriorMarkerAction {
   execute(actionState: IActionState) {
     const { marker, markers } = actionState;
     const index = markers.indexOf(marker);
-    if (index <= 0) return;
+    if (index <= 0) {
+      toaster("Prior Stop not found");
+      return;
+    }
     const next = markers[index - 1];
     trigger("popup", { marker: next });
   }
