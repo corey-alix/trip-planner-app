@@ -1,3 +1,33 @@
+interface GoogleReverseGeocodeResponse {
+  plus_code: {
+    compound_code: string;
+    global_code: string;
+  };
+  results: Array<{
+    address_components: Array<{
+      long_name: string;
+      short_name: string;
+      types: Array<string>;
+    }>;
+    formatted_address: string;
+    geometry: {
+      location: { lat: number; lng: number };
+      location_type: string;
+      viewport: {
+        northeast: { lat: number; lng: number };
+        southwest: { lat: number; lng: number };
+      };
+    };
+    place_id: string;
+    plus_code: {
+      compound_code: string;
+      global_code: string;
+    };
+    types: Array<string>;
+  }>;
+  status: "OK";
+}
+
 import * as Leaflet from "leaflet";
 
 declare const L: typeof Leaflet;
@@ -137,6 +167,11 @@ export function run() {
       iconSize: [12 * ICON_SCALE, 20 * ICON_SCALE],
       iconAnchor: [6 * ICON_SCALE, 20 * ICON_SCALE + 3],
     }),
+    whatIsHereIcon: new L.DivIcon({
+      className: "what-is-here",
+      iconSize: [6 * ICON_SCALE, 10 * ICON_SCALE],
+      iconAnchor: [3 * ICON_SCALE, 10 * ICON_SCALE],
+    }),
   };
 
   function createMarker(map: Leaflet.Map, markerInfo: MarkerInfo) {
@@ -181,9 +216,9 @@ export function run() {
       }</button>
       </div>
       <div class="col2 grid-2">
-      <button class="col1-2"  type="button" data-trigger="describe-marker">Edit Notes</button>
-      <button class="col1-2"  type="button" data-trigger="delete-marker">Remove from Route</button>
-      <button class="col1-2"  type="button" data-trigger="insert-stop">Insert Stop</button>
+      <button class="col1-2" type="button" data-trigger="describe-marker">Edit Notes</button>
+      <button class="col1-2" type="button" data-trigger="delete-marker">Remove from Route</button>
+      <button class="col1-2" type="button" data-trigger="insert-stop">Insert Stop</button>
       </div>
       `;
 
@@ -195,15 +230,44 @@ export function run() {
       state.markerInfo = markerInfo;
     });
 
+    marker.addTo(map);
+    state.markerHash.set(markerInfo.id, marker);
+    return marker;
+  }
+
+  function createWhatIsHereMarker(map: Leaflet.Map, markerInfo: MarkerInfo) {
+    markerInfo.id = markerInfo.id || uuid();
+    const marker = L.marker(markerInfo.center, {
+      title: markerInfo.text,
+      draggable: true,
+      autoPan: true,
+      icon: icons.whatIsHereIcon,
+    });
+
+    const content = document.createElement("div");
+    content.classList.add("marker-content", "grid-2");
+    marker.bindPopup(content);
+
+    marker.on("popupopen", () => {
+      state.markerInfo = markerInfo;
+
+      content.innerHTML = `<address>${markerInfo.text}</address>
+    <div class="col1 grid-2">
+      <button type="button" data-trigger="directions-to-marker">Directions</button>
+    </div>`;
+
+      const popupElement = marker.getPopup()?.getElement();
+      if (!popupElement) return;
+
+      applyTriggers(popupElement);
+    });
+
     marker.on("dragend", () => {
       const { lat, lng } = marker.getLatLng();
       markerInfo.center = { lat, lng };
-      saveMarkers(state.markers);
-      decorateStops(map);
     });
 
     marker.addTo(map);
-    state.markerHash.set(markerInfo.id, marker);
     return marker;
   }
 
@@ -286,6 +350,21 @@ export function run() {
   hookupSearch();
   upgradeDatabase();
 
+  on("reverse-locate", async (args: { latlng: L.LatLngLiteral }) => {
+    const rawResult = await GoogleApi.reverseGeocode(args.latlng);
+    if (!rawResult.results.length) {
+      trigger("nothing found");
+      return;
+    }
+    const bestMatch = rawResult.results[0];
+    createWhatIsHereMarker(map, {
+      id: uuid(),
+      about: bestMatch.formatted_address,
+      center: bestMatch.geometry.location,
+      text: bestMatch.formatted_address,
+    }).openPopup();
+  });
+
   on("popup", (args: { marker: MarkerInfo }) => {
     const marker = state.markerHash.get(args.marker.id);
     map.flyTo(args.marker.center);
@@ -318,7 +397,7 @@ export function run() {
 
   on("goto-current-location", () => {
     navigator.geolocation.getCurrentPosition((pos) => {
-    const { latitude, longitude } = pos.coords;
+      const { latitude, longitude } = pos.coords;
       map.flyTo({ lat: latitude, lng: longitude });
     });
   });
@@ -334,7 +413,7 @@ export function run() {
       return;
     }
     locationTrackingHandler = navigator.geolocation.watchPosition((pos) => {
-    const { latitude, longitude } = pos.coords;
+      const { latitude, longitude } = pos.coords;
       const location = { lat: latitude, lng: longitude };
       map.flyTo(location);
       if (!locationMarker) {
@@ -406,6 +485,11 @@ export function run() {
   map.on("move", () => {
     localStorage.setItem("mapCenter", JSON.stringify(map.getCenter()));
     localStorage.setItem("mapZoom", JSON.stringify(map.getZoom()));
+  });
+
+  map.on("click", (e) => {
+    const { latlng } = e;
+    trigger("reverse-locate", { latlng });
   });
 
   on("add-marker", (info: { markerInfo: MarkerInfo }) => {
@@ -686,6 +770,7 @@ function loadMarkers() {
 
 // raise an HTML event
 function trigger(trigger: string, node?: any) {
+  console.log("trigger", trigger, node);
   if (!trigger) return;
   const event = new CustomEvent(trigger, {
     detail: {
@@ -803,6 +888,15 @@ class GoogleApi {
       `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedSearch}&bounds=${near.lat},${near.lng}%7C,${near.lat},${near.lng}&key=${globals.googleapi.key}`
     );
     const data = (await response.json()) as GoogleGeocoderResponse;
+    return data;
+  }
+
+  static async reverseGeocode(near: Leaflet.LatLngLiteral) {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${near.lat},${near.lng}&key=${globals.googleapi.key}`
+    );
+    const data = (await response.json()) as GoogleReverseGeocodeResponse;
+    console.log(data);
     return data;
   }
 

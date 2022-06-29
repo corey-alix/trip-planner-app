@@ -210,3 +210,8 @@ input[type="datetime-local"] {
   color: var(--color-bright);
   display: none;
 }
+
+.what-is-here {
+  background: orange;
+  border: 1px solid white;
+}

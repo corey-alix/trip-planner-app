@@ -23,6 +23,7 @@ Add waypoints to a map and decorate each point with attributes
 - ☐ backup to Fauna
 - ☐ provide an app key and it sets the Fauna, google API and mapify keys in the client (requires Netlify lambda)
 - ☐ add a stop with long-press popup
+- ☐ search without adding a stop via "pan-to: san francisco"
 - ✓ center map at current location/show current location
 - ✓ track location: show marker at current location
 
